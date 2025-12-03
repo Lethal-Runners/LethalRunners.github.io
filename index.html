@@ -1,35 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lethal Runners</title>
   <link rel="icon" type="image/png" href="https://i.postimg.cc/J0hfHkpt/pixil-frame-0-33.png">
-  <link rel="stylesheet" href="style.css">
   <style>
-    html, body {
+    * {
       margin: 0;
       padding: 0;
-      overflow-x: hidden;
-      font-family: sans-serif;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      min-height: 100vh;
     }
 
     #navbar {
       background: #000;
-      height: 50px;
+      height: 60px;
       display: flex;
       align-items: center;
+      box-shadow: 0 2px 10px rgba(0, 255, 204, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     #navbar a, #navbar div {
-      width: 50px;
-      height: 50px;
-      display: block;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    #navbar a:hover, #navbar div:hover {
+      background: rgba(0, 255, 204, 0.1);
     }
     
     #navbar img {
-      width: 50px;
-      height: 50px;
-      display: block;
+      width: 35px;
+      height: 35px;
+      filter: brightness(0) invert(1);
+      transition: filter 0.3s ease;
+    }
+
+    #navbar a:hover img, #navbar div:hover img {
+      filter: brightness(0) invert(1) drop-shadow(0 0 8px #00ffcc);
     }
 
     #sidebar {
@@ -38,40 +61,33 @@
       left: -250px;
       width: 250px;
       height: 100%;
-      background: #222;
-      color: black;
-      padding: 20px;
-      box-sizing: border-box;
+      background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+      padding: 80px 20px 20px;
       transition: left 0.3s ease;
       z-index: 1001;
-    }
-#sidebar {
-      position: fixed;
-      side: 0;
-      left: -250px;
-      width: 250px;
-      height: 100%;
-      background: #222;
-      color: #222;
-      padding: 20px;
-      box-sizing: border-box;
-      transition: left 0.3s ease;
-      z-index: 1001;
+      box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5);
     }
 
     #sidebar ul {
       list-style: none;
-      padding: 0;
-      margin-top: 0px;
     }
 
     #sidebar ul li {
-      margin: 15px 0;
+      margin: 20px 0;
     }
 
     #sidebar ul li a {
-      color: white;
+      color: #fff;
       text-decoration: none;
+      font-size: 1.1em;
+      transition: color 0.3s ease, padding-left 0.3s ease;
+      display: block;
+      padding: 10px 0;
+    }
+
+    #sidebar ul li a:hover {
+      color: #00ffcc;
+      padding-left: 10px;
     }
 
     #overlay {
@@ -80,20 +96,141 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
       display: none;
       z-index: 1000;
     }
 
-    #content {
-      padding: 20px;
-      z-index: 0;
+    header {
+      text-align: center;
+      padding: 60px 20px 40px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+    }
+
+    header h1 {
+      font-size: 3.5em;
+      color: #00ffcc;
+      text-shadow: 0 0 30px rgba(0, 255, 204, 0.6);
+      margin-bottom: 15px;
+      letter-spacing: 3px;
+    }
+
+    header h2 {
+      font-size: 1.8em;
+      color: #fff;
+      font-weight: 300;
+      margin-bottom: 15px;
+    }
+
+    header p {
+      font-size: 1.2em;
+      color: #aaa;
+      max-width: 800px;
+      margin: 0 auto 30px;
+      line-height: 1.6;
+    }
+
+    .hero {
+      text-align: center;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .hero img {
+      max-width: 90%;
+      width: 800px;
+      border-radius: 20px;
+      box-shadow: 0 15px 50px rgba(0, 255, 204, 0.3);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .hero img:hover {
+      transform: scale(1.02);
+      box-shadow: 0 20px 60px rgba(0, 255, 204, 0.4);
+    }
+
+    .content {
+      max-width: 1000px;
+      margin: 60px auto;
+      padding: 0 20px;
+      text-align: center;
+    }
+
+    .content p {
+      font-size: 1.15em;
+      line-height: 1.8;
+      color: #ccc;
+      margin-bottom: 40px;
+    }
+
+    .gallery-section {
+      margin-top: 80px;
+      padding: 40px 20px;
+    }
+
+    .gallery-section h3 {
+      text-align: center;
+      font-size: 2em;
+      color: #00ffcc;
+      margin-bottom: 40px;
+      text-shadow: 0 0 15px rgba(0, 255, 204, 0.4);
+    }
+
+    .gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 25px;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    .gallery img {
+      width: 100%;
+      height: 280px;
+      object-fit: cover;
+      border-radius: 15px;
+      box-shadow: 0 5px 20px rgba(0, 255, 204, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      cursor: pointer;
+    }
+
+    .gallery img:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 15px 40px rgba(0, 255, 204, 0.4);
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      background: #000;
+      color: #666;
+      font-size: 0.9em;
+      margin-top: 80px;
+      border-top: 1px solid rgba(0, 255, 204, 0.2);
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 2.2em;
+      }
+
+      header h2 {
+        font-size: 1.4em;
+      }
+
+      .gallery {
+        grid-template-columns: 1fr;
+      }
+
+      .gallery img {
+        height: 250px;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Sidebar -->
   <div id="sidebar" onmouseleave="closeSidebar()">
     <ul>
       <li><a href="https://lethalrunners.com/">Main Page</a></li>
@@ -103,29 +240,51 @@
     </ul>
   </div>
 
-  <!-- Dark overlay -->
-  <div id="overlay"></div>
+  <div id="overlay" onclick="closeSidebar()"></div>
 
-  <!-- Top nav bar -->
   <div id="navbar">
-    <!-- Sidebar toggle button -->
     <div onclick="openSidebar()">
       <img src="https://lethalrunners.com/menu.png" alt="Menu">
     </div>
-
-    <!-- Link to main page -->
     <a href="https://lethalrunners.com">
       <img src="https://lethalrunners.com/home.png" alt="Home">
     </a>
   </div>
 
-  <!-- Page content -->
-  <div id="content">
-    <h1></h1>
+  <header>
+    <h1>Lethal Runners VR</h1>
+    <h2>Welcome to Lethal Runners</h2>
+    <p>Run, Climb, Collect and Escape the Horrors of the Depth</p>
+  </header>
+
+  <div class="hero">
+    <img src="https://i.postimg.cc/43NQgQyK/new-front-icon.png" alt="Lethal Runners Forest Map">
   </div>
 
-</div>
-  <!-- JavaScript -->
+  <div class="content">
+    <p>
+      Lethal Runners is a fast-paced VR parkour game where you can climb trees, swing through obstacles, and collect hidden pink crystals.
+      Unlock exclusive cosmetics, meet amazing moderators, and enjoy a unique experience built with passion for the VR community.
+    </p>
+  </div>
+
+  <div class="gallery-section">
+    <h3>Experience the Adventure</h3>
+    <div class="gallery">
+      <img src="https://i.postimg.cc/52fwBSwP/Screenshot-2025-05-31-172025.png" alt="Lethal Runners Forest Map">
+      <img src="https://i.postimg.cc/tTGMQ8vQ/Screenshot-2025-05-09-221201.png" alt="Lethal Runners Cave Map">
+      <img src="https://i.postimg.cc/zBhbZyCb/Screenshot-2025-05-31-171509.png" alt="Cosmetic Shop">
+      <img src="https://i.ibb.co/bMvmD1zQ/Screenshot-2025-04-15-163927.png" alt="Player with Crown Cosmetic">
+      <img src="https://i.postimg.cc/Qtg8J1gb/Screenshot-2025-05-31-172105.png" alt="Cave Enter">
+      <img src="https://i.postimg.cc/Dz654ymM/Screenshot-2025-05-31-171726.png" alt="UFO Crash">
+      <img src="https://i.postimg.cc/rFYDs68N/Screenshot-2025-05-31-171453.png" alt="More Cosmetics">
+    </div>
+  </div>
+
+  <footer>
+    &copy; 2025 Lethal Runners. All rights reserved.
+  </footer>
+
   <script>
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
@@ -140,116 +299,6 @@
       overlay.style.display = 'none';
     }
   </script>
-
-</body>
-</html>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lethal Runners</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #222;
-      color: #fff;
-      margin: 0;
-      padding: 0;
-    }
-
-    header {
-      background-color: #222;
-      padding: 20px;
-      text-align: center;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 2.5em;
-      color: #00ffcc;
-    }
-
-    .hero {
-      text-align: center;
-      margin: 20px auto;
-    }
-
-    .hero img {
-      width: 60%;
-      max-width: 800px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px #00ffcc55;
-    }
-
-    .content {
-      padding: 20px;
-      text-align: center;
-      max-width: 900px;
-      margin: auto;
-    }
-
-    .gallery {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      margin-top: 30px;
-    }
-
-    .gallery img {
-      width: auto;
-      height: 280px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #00ffcc33;
-    }
-    
-    .object img {
-      width: 600px;
-      height: auto;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #00ffcc33;
-    }
-
-    footer {
-      text-align: center;
-      padding: 20px;
-      background-color: #111;
-      color: #777;
-      font-size: 0.9em;
-    }
-  </style>
-</head>
-<body>
-
-  <header>
-    <h1>Lethal Runners VR</h1>
-
-    <h2>Welcome to Lethal Runners</h2>
-    <p>Where you can Run, Climb, Collect and Escape the Horrors of the depth.</p>
-      <section class="object">
-    <img src="https://i.postimg.cc/43NQgQyK/new-front-icon.png" alt="Lethal Runners Forest Map">
-        </section>
-    <p>
-      Lethal Runners is a fast-paced VR parkour game where you can climb trees, swing through obstacles, and collect hidden pink crystals.
-      Unlock exclusive cosmetics, meet amazing moderators, and enjoy a unique experience built with passion for the VR community.
-    </p>
-    
-<section class="gallery">
-    <img src="https://i.postimg.cc/52fwBSwP/Screenshot-2025-05-31-172025.png" alt="Lethal Runners Forest Map">
-    <img src="https://i.postimg.cc/tTGMQ8vQ/Screenshot-2025-05-09-221201.png" alt="Lethal Runners Cave Map">
-    <img src="https://i.postimg.cc/zBhbZyCb/Screenshot-2025-05-31-171509.png" alt="Cosmetic Shop">
-    <img src="https://i.ibb.co/bMvmD1zQ/Screenshot-2025-04-15-163927.png" alt="Player with Crown Cosmetic">
-    <img src="https://i.postimg.cc/Qtg8J1gb/Screenshot-2025-05-31-172105.png" alt="Cave Enter">
-    <img src="https://i.postimg.cc/Dz654ymM/Screenshot-2025-05-31-171726.png" alt="UFO Crash">
-     <img src="https://i.postimg.cc/rFYDs68N/Screenshot-2025-05-31-171453.png" alt="More Cosmetics">
-    </div>
-    </section>
-
-  <footer>
-    &copy; 2025 Lethal Runners. All rights reserved.
-  </footer>
 
 </body>
 </html>
