@@ -1,35 +1,58 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Lethal Runners</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lethal Runners - Privacy Policy</title>
   <link rel="icon" type="image/png" href="https://i.postimg.cc/J0hfHkpt/pixil-frame-0-33.png">
-  <link rel="stylesheet" href="style.css">
   <style>
-    html, body {
+    * {
       margin: 0;
       padding: 0;
-      overflow-x: hidden;
-      font-family: sans-serif;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #fff;
+      min-height: 100vh;
     }
 
     #navbar {
       background: #000;
-      height: 50px;
+      height: 60px;
       display: flex;
       align-items: center;
+      box-shadow: 0 2px 10px rgba(0, 255, 204, 0.3);
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     #navbar a, #navbar div {
-      width: 50px;
-      height: 50px;
-      display: block;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    #navbar a:hover, #navbar div:hover {
+      background: rgba(0, 255, 204, 0.1);
     }
     
     #navbar img {
-      width: 50px;
-      height: 50px;
-      display: block;
+      width: 35px;
+      height: 35px;
+      filter: brightness(0) invert(1);
+      transition: filter 0.3s ease;
+    }
+
+    #navbar a:hover img, #navbar div:hover img {
+      filter: brightness(0) invert(1) drop-shadow(0 0 8px #00ffcc);
     }
 
     #sidebar {
@@ -38,40 +61,33 @@
       left: -250px;
       width: 250px;
       height: 100%;
-      background: #222;
-      color: black;
-      padding: 20px;
-      box-sizing: border-box;
+      background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+      padding: 80px 20px 20px;
       transition: left 0.3s ease;
       z-index: 1001;
-    }
-#sidebar {
-      position: fixed;
-      side: 0;
-      left: -250px;
-      width: 250px;
-      height: 100%;
-      background: #222;
-      color: #222;
-      padding: 20px;
-      box-sizing: border-box;
-      transition: left 0.3s ease;
-      z-index: 1001;
+      box-shadow: 2px 0 15px rgba(0, 0, 0, 0.5);
     }
 
     #sidebar ul {
       list-style: none;
-      padding: 0;
-      margin-top: 0px;
     }
 
     #sidebar ul li {
-      margin: 15px 0;
+      margin: 20px 0;
     }
 
     #sidebar ul li a {
-      color: white;
+      color: #fff;
       text-decoration: none;
+      font-size: 1.1em;
+      transition: color 0.3s ease, padding-left 0.3s ease;
+      display: block;
+      padding: 10px 0;
+    }
+
+    #sidebar ul li a:hover {
+      color: #00ffcc;
+      padding-left: 10px;
     }
 
     #overlay {
@@ -80,20 +96,158 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.7);
       display: none;
       z-index: 1000;
     }
 
-    #content {
-      padding: 20px;
-      z-index: 0;
+    header {
+      text-align: center;
+      padding: 60px 20px 40px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+    }
+
+    header h1 {
+      font-size: 3em;
+      color: #00ffcc;
+      text-shadow: 0 0 20px rgba(0, 255, 204, 0.5);
+      margin-bottom: 10px;
+      letter-spacing: 2px;
+    }
+
+    header p {
+      color: #999;
+      font-size: 1em;
+      font-style: italic;
+    }
+
+    .content-wrapper {
+      max-width: 900px;
+      margin: 40px auto;
+      padding: 0 20px 60px;
+    }
+
+    .intro {
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px solid rgba(0, 255, 204, 0.2);
+      border-radius: 15px;
+      padding: 30px;
+      margin-bottom: 40px;
+      backdrop-filter: blur(10px);
+    }
+
+    .intro p {
+      font-size: 1.1em;
+      line-height: 1.8;
+      color: #ccc;
+    }
+
+    .section {
+      background: rgba(255, 255, 255, 0.03);
+      border-left: 4px solid #00ffcc;
+      border-radius: 8px;
+      padding: 30px;
+      margin-bottom: 30px;
+      transition: background 0.3s ease;
+    }
+
+    .section:hover {
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .section h2 {
+      color: #00ffcc;
+      font-size: 1.6em;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .section p {
+      line-height: 1.8;
+      color: #ddd;
+      margin-bottom: 15px;
+      font-size: 1.05em;
+    }
+
+    .section ul {
+      list-style: none;
+      padding: 0;
+      margin: 15px 0;
+    }
+
+    .section li {
+      padding: 10px 0 10px 25px;
+      position: relative;
+      color: #ddd;
+      line-height: 1.6;
+    }
+
+    .section li:before {
+      content: "•";
+      position: absolute;
+      left: 0;
+      color: #00ffcc;
+      font-size: 1.5em;
+      line-height: 1;
+    }
+
+    .section a {
+      color: #00ffcc;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .section a:hover {
+      color: #00ddaa;
+      text-decoration: underline;
+    }
+
+    .highlight-box {
+      background: rgba(0, 255, 204, 0.1);
+      border: 2px solid rgba(0, 255, 204, 0.3);
+      border-radius: 10px;
+      padding: 25px;
+      margin-top: 40px;
+    }
+
+    .highlight-box h2 {
+      color: #00ffcc;
+      font-size: 1.5em;
+      margin-bottom: 15px;
+    }
+
+    .highlight-box p {
+      color: #fff;
+      line-height: 1.8;
+      font-size: 1.05em;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px 20px;
+      background: #000;
+      color: #666;
+      font-size: 0.9em;
+      border-top: 1px solid rgba(0, 255, 204, 0.2);
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 2em;
+      }
+
+      .section {
+        padding: 20px;
+      }
+
+      .section h2 {
+        font-size: 1.4em;
+      }
     }
   </style>
 </head>
 <body>
 
-  <!-- Sidebar -->
   <div id="sidebar" onmouseleave="closeSidebar()">
     <ul>
       <li><a href="https://lethalrunners.com/">Main Page</a></li>
@@ -103,29 +257,79 @@
     </ul>
   </div>
 
-  <!-- Dark overlay -->
-  <div id="overlay"></div>
+  <div id="overlay" onclick="closeSidebar()"></div>
 
-  <!-- Top nav bar -->
   <div id="navbar">
-    <!-- Sidebar toggle button -->
     <div onclick="openSidebar()">
       <img src="https://lethalrunners.com/menu.png" alt="Menu">
     </div>
-
-    <!-- Link to main page -->
     <a href="https://lethalrunners.com">
       <img src="https://lethalrunners.com/home.png" alt="Home">
     </a>
   </div>
 
-  <!-- Page content -->
-  <div id="content">
-    <h1></h1>
+  <header>
+    <h1>Privacy Policy</h1>
+    <p>Last updated: September 4, 2025</p>
+  </header>
+
+  <div class="content-wrapper">
+    <div class="intro">
+      <p>This Privacy Policy explains how Lethal Runners collects, uses, and protects your data when you use our VR application.</p>
+    </div>
+
+    <div class="section">
+      <h2>Information We Collect</h2>
+      <ul>
+        <li>User-generated content such as usernames and chat messages</li>
+        <li>Device and usage data including headset model and crash logs</li>
+        <li>Interaction data such as in-app behavior, hand tracking, and microphone input if applicable</li>
+        <li>Age of users accessing the app</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>How We Use Your Data</h2>
+      <ul>
+        <li>To improve app functionality and user experience</li>
+        <li>To analyze usage and performance</li>
+        <li>To ensure user safety and prevent abuse</li>
+        <li>To ensure that the game is suitable for the intended age range</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2>Data Storage and Security</h2>
+      <p>We store data securely using encryption where appropriate. Access is limited to authorized personnel only.</p>
+    </div>
+
+    <div class="section">
+      <h2>Sharing of Data</h2>
+      <p>We do not sell personal data. We may share data with in-game moderators for analytics and crash reporting purposes.</p>
+      <p>We only share user data with PlayFab to provide item management services.</p>
+    </div>
+
+    <div class="section">
+      <h2>Disposal of Data</h2>
+      <p>Users can request that their game data be deleted, clearing all history except ban history to prevent abuse of the system.</p>
+      <p>Data will be automatically deleted after a period of 3 months of inactivity, including ban data.</p>
+    </div>
+
+    <div class="highlight-box">
+      <h2>Copyright Notice</h2>
+      <p>This game and all of its assets, content, and intellectual property are protected by copyright law. Any unauthorized use in other games or projects is strictly prohibited and constitutes copyright infringement.</p>
+    </div>
+
+    <div class="highlight-box">
+      <h2>Requesting Permission to Use Assets</h2>
+      <p>If you wish to use any assets from this game, you must contact us directly at <a href="mailto:Jscooke@hubofit.co.uk">Jscooke@hubofit.co.uk</a>. We can then discuss and establish a legal agreement for usage.</p>
+    </div>
   </div>
 
-</div>
-  <!-- JavaScript -->
+  <footer>
+    &copy; 2025 Lethal Runners. All rights reserved.
+  </footer>
+
   <script>
     const sidebar = document.getElementById('sidebar');
     const overlay = document.getElementById('overlay');
@@ -140,144 +344,6 @@
       overlay.style.display = 'none';
     }
   </script>
-
-</body>
-</html>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Lethal Runners</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #222;
-      color: #fff;
-      font-size: 1em;
-      margin: 0;
-      padding: 0;
-    }
-
-    header {
-      background-color: #222;
-      padding: 0px;
-      text-align: center;
-    }
-
-    header h1 {
-      margin: 0;
-      font-size: 2.5em;
-      color: #00ffcc;
-    }
-
-    .hero {
-      text-align: center;
-      margin: 20px auto;
-    }
-
-    .hero img {
-      width: 60%;
-      max-width: 800px;
-      border-radius: 15px;
-      box-shadow: 0 0 20px #00ffcc55;
-    }
-
-    .content {
-      padding: 20px;
-      text-align: center;
-      max-width: 900px;
-      margin: auto;
-    }
-
-    .gallery {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 15px;
-      margin-top: 30px;
-    }
-
-    .gallery img {
-      width: auto;
-      height: 280px;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #00ffcc33;
-    }
-    
-    .object img {
-      width: 600px;
-      height: auto;
-      border-radius: 10px;
-      box-shadow: 0 0 10px #00ffcc33;
-    }
-
-    footer {
-      text-align: center;
-      padding: 20px;
-      background-color: #111;
-      color: #777;
-      font-size: 0.9em;
-    }
-  </style>
-</head>
-<header>
-<head>
-  <title>Privacy Policy</title>
-</head>
-<body>
-  <h1>Privacy Policy for the Organization Lethal Runners</h1>
-  <p>Last updated: September 4, 2025</p>
-
-  <p>This Privacy Policy explains how our VR app collects, uses, and protects your data.</p>
-</header>
-  <h2>Information We Collect</h2>
-  <ul>
-    <p>User-generated content (e.g., usernames, chat messages)</p>
-    <p>Device and usage data (e.g., headset model, crash logs)</p>
-    <p>Interaction data (e.g., in-app behavior, hand tracking, microphone input if applicable)</p>
-    <p>Age of users accessing the app</p>
-<!--     <li>User-generated content (e.g., usernames, chat messages)</li>
-    <li>Device and usage data (e.g., headset model, crash logs)</li>
-    <li>Interaction data (e.g., in-app behavior, hand tracking, microphone input if applicable)</li>
-    <li>Age of users accessing the app</li> -->
-  </ul>
-
-  <h2>How We Use Your Data</h2>
-  <ul>
-    <p>To improve app functionality and user experience</p>
-    <p>To analyze usage and performance</p>
-    <p>To ensure user safety and prevent abuse</p>
-    <p>To ensure that the game is suitable for the intended age range</p>
-  </ul>
-
-  <h2>Data Storage and Security</h2>
-  <p>We store data securely using encryption where appropriate. Access is limited to authorized personnel only.</p>
-
-  <h2>Sharing of Data</h2>
-  <p>We do not sell personal data. We may share data with in-game moderators for analytics and crash reporting purposes.</p>
-  <p>We only share user data with PlayFab to provide item management services.</p>
-
-  <h2>Disposal of Data</h2>
-  <p>Users can request that their game data be deleted, clearing all history except ban history to prevent abuse of the system.</p>
-  <p>Data will be automatically deleted after a period of 3 months of inactivity, including ban data.</p>
-
-  <h2>Copyright Notice</h2>
-  <p>This game and all of its assets, content, and intellectual property are protected by copyright law. Any unauthorized use in other games or projects is strictly prohibited and constitutes copyright infringement.</p>
-  
-  <h2>Requesting Permission to Use Assets</h2>
-  <p>If you wish to use any assets from this game, you must contact me directly at 
-     <a href="mailto:Jscooke@hubofit.co.uk">Jscooke@hubofit.co.uk</a>. 
-     We can then discuss and establish a legal agreement for usage.</p>
-
-<!-- 
-  <h2>Contact</h2>
-  <p>If you have questions about this Privacy Policy, contact us at <a href="mailto:Jscooke@hubofit.co.uk">Jscooke@hubofit.co.uk</a>.</p>
- -->
-  <footer>
-    &copy; 2025 Lethal Runners. All rights reserved.
-  </footer>
 
 </body>
 </html>
