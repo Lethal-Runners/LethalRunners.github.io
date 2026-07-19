@@ -347,6 +347,7 @@ const SKYBOX = {
 const STAND_MODEL = {
   url: 'https://raw.githubusercontent.com/Lethal-Runners/LethalRunners.github.io/main/CosmeticCodeBuilderBeta/untitled.glb',           // <-- paste your .glb/.gltf URL/path here
   yOffset: -0.55,
+  zOffset: -0.025,
   scale: 0.95
 };
 
@@ -1042,7 +1043,7 @@ function buildStandReference() {
         model.position.set(
           HEAD_REFERENCE.offset.x,
           HEAD_REFERENCE.offset.y + STAND_MODEL.yOffset,
-          HEAD_REFERENCE.offset.z
+          HEAD_REFERENCE.offset.z + STAND_MODEL.zOffset
         );
 
         model.scale.setScalar(STAND_MODEL.scale);
