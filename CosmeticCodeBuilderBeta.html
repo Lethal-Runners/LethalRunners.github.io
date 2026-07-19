@@ -1,0 +1,1578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Cosmetic Code Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
+<style>
+  :root {
+    --bg: #14161c;
+    --panel: #1c1f28;
+    --panel-alt: #232734;
+    --border: #2e3342;
+    --text: #e8eaf0;
+    --text-dim: #8a90a4;
+    --accent: #6c8cff;
+    --accent-dim: #3a4a8a;
+    --danger: #ff6b6b;
+    --radius: 8px;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+  }
+  #app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+
+  .panel {
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 14px;
+  }
+  #left { width: 220px; flex-shrink: 0; }
+  #right { width: 300px; flex-shrink: 0; border-right: none; border-left: 1px solid var(--border); }
+  #center { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  #viewport { flex: 1; position: relative; }
+  #viewport canvas { display: block; width: 100%; height: 100%; }
+  #hint {
+    position: absolute; bottom: 10px; left: 10px;
+    color: var(--text-dim); font-size: 11px; pointer-events: none;
+    background: rgba(0,0,0,0.35); padding: 4px 8px; border-radius: 6px;
+    max-width: 60%;
+  }
+
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-dim); margin: 0 0 10px; }
+  .section { margin-bottom: 20px; }
+
+  button {
+    background: var(--panel-alt); color: var(--text); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 8px 10px; cursor: pointer; font-size: 13px;
+    transition: background 0.15s, border-color 0.15s;
+    width: 100%; margin-bottom: 6px; text-align: left;
+  }
+  button:hover { background: #2a2f3d; border-color: var(--accent-dim); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #0c0e14; font-weight: 600; }
+  button.primary:hover { background: #7f9bff; }
+  button.danger { color: var(--danger); }
+  button.small { width: auto; padding: 4px 8px; font-size: 11px; margin: 0; flex: 1; text-align: center; }
+  button.active { background: var(--accent); border-color: var(--accent); color: #0c0e14; font-weight: 600; }
+
+  .shape-btn { display: flex; align-items: center; gap: 8px; }
+  .swatch { width: 14px; height: 14px; border-radius: 3px; background: var(--accent); flex-shrink: 0; }
+
+  #shapeList { list-style: none; margin: 0; padding: 0; }
+  #shapeList li {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 8px; border-radius: 6px; margin-bottom: 4px; cursor: pointer;
+    border: 1px solid transparent; font-size: 12px;
+  }
+  #shapeList li:hover { background: var(--panel-alt); }
+  #shapeList li.selected { background: var(--accent-dim); border-color: var(--accent); }
+  #shapeList .del { color: var(--danger); font-weight: bold; padding: 0 4px; }
+
+  label { display: block; color: var(--text-dim); font-size: 11px; margin: 10px 0 4px; }
+  .row3 { display: flex; gap: 6px; }
+  .row3 > div { flex: 1; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  input[type=number] {
+    width: 100%; background: var(--panel-alt); border: 1px solid var(--border);
+    color: var(--text); border-radius: 5px; padding: 3px 5px; font-size: 11px;
+  }
+  select {
+    width: 100%; background: var(--panel-alt); border: 1px solid var(--border);
+    color: var(--text); border-radius: 5px; padding: 6px; font-size: 12px;
+  }
+  input[type=color] {
+    width: 100%; height: 30px; border: 1px solid var(--border); border-radius: 5px;
+    background: var(--panel-alt); padding: 2px;
+  }
+  .empty-msg { color: var(--text-dim); font-size: 12px; line-height: 1.5; padding: 8px 2px; }
+
+  textarea {
+    width: 100%; height: 140px; background: #0e1016; color: #9fe6a0;
+    border: 1px solid var(--border); border-radius: 6px; font-family: "SF Mono", Menlo, monospace;
+    font-size: 11px; padding: 8px; resize: vertical;
+  }
+  #importBox { color: #cfd6ff; }
+  .btn-row { display: flex; gap: 6px; }
+  .btn-row button { margin-bottom: 0; }
+  .field-value { color: var(--text-dim); font-size: 10px; float: right; }
+  .texture-preview {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 6px;
+  }
+  .texture-swatch {
+    aspect-ratio: 1; border-radius: 5px; border: 2px solid var(--border);
+    cursor: pointer; background-size: cover; overflow: hidden;
+  }
+  .texture-swatch.selected { border-color: var(--accent); }
+  .texture-swatch canvas { width: 100%; height: 100%; display: block; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- LEFT: shape palette + shape list + gizmo controls -->
+  <div class="panel" id="left">
+    <div class="section">
+      <h2>Add Shape</h2>
+      <button class="shape-btn" onclick="addShape('Cube')"><span class="swatch"></span>Cube</button>
+      <button class="shape-btn" onclick="addShape('Sphere')"><span class="swatch"></span>Sphere</button>
+      <button class="shape-btn" onclick="addShape('Capsule')"><span class="swatch"></span>Capsule</button>
+      <button class="shape-btn" onclick="addShape('Cylinder')"><span class="swatch"></span>Cylinder</button>
+    </div>
+    <div class="section">
+      <h2>Gizmo</h2>
+      <div class="btn-row">
+        <button class="small" id="gizmoMove" onclick="setGizmoMode('translate')">Move</button>
+        <button class="small" id="gizmoRotate" onclick="setGizmoMode('rotate')">Rotate</button>
+        <button class="small" id="gizmoScale" onclick="setGizmoMode('scale')">Scale</button>
+      </div>
+      <div style="font-size:10px; color:var(--text-dim); line-height:1.5; margin-top:6px;">
+        <span style="color:#5c9cff;">■</span> Blue arrow/axis = local +Z = front (matches Unity's forward direction). Gizmo is locked to each shape's own local axes.
+      </div>
+    </div>
+    <div class="section">
+      <h2>Shapes <span id="shapeCount" style="color:var(--text-dim); font-weight:normal;"></span></h2>
+      <ul id="shapeList"></ul>
+      <div id="emptyMsg" class="empty-msg">No shapes yet — add one above to start building.</div>
+    </div>
+    <div class="section">
+      <button class="danger" onclick="resetAll()">Reset Builder</button>
+    </div>
+  </div>
+
+  <!-- CENTER: 3D viewport -->
+  <div id="center">
+    <div id="viewport">
+      <div id="hint">Drag to orbit &nbsp;•&nbsp; Scroll to zoom &nbsp;•&nbsp; Middle-drag to pan &nbsp;•&nbsp; Click to select &nbsp;•&nbsp; Shift-click / shift-drag to multi-select &nbsp;•&nbsp; Ctrl+Z/Y undo/redo &nbsp;•&nbsp; Ctrl+C/V copy/paste &nbsp;•&nbsp; Del to delete &nbsp;•&nbsp; Blue wireframe = head-size reference &nbsp;•&nbsp; Dashed box = build area</div>
+    </div>
+  </div>
+
+  <!-- RIGHT: transform / material / texture / code panel -->
+  <div class="panel" id="right">
+    <div class="section" id="transformSection" style="display:none;">
+      <h2>Transform</h2>
+
+      <label>Position</label>
+      <div class="row3">
+        <div><input type="number" id="posX" step="0.05" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+        <div><input type="number" id="posY" step="0.05" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+        <div><input type="number" id="posZ" step="0.05" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+      </div>
+
+      <label>Rotation (deg)</label>
+      <div class="row3">
+        <div><input type="number" id="rotX" step="1" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+        <div><input type="number" id="rotY" step="1" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+        <div><input type="number" id="rotZ" step="1" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+      </div>
+
+      <label>Scale</label>
+      <div class="row3">
+        <div><input type="number" id="scaleX" step="0.05" min="0.01" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+        <div><input type="number" id="scaleY" step="0.05" min="0.01" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+        <div><input type="number" id="scaleZ" step="0.05" min="0.01" oninput="onTransformInput()" onfocus="beginEditHistory()" onblur="endEditHistory()"></div>
+      </div>
+
+      <label>Material</label>
+      <select id="materialSelect" onchange="onMaterialInput()">
+        <option>Default</option>
+        <option>Metallic</option>
+        <option>Glass</option>
+        <option>Emissive</option>
+      </select>
+
+      <label>Color</label>
+      <input type="color" id="colorInput" value="#6c8cff" oninput="onColorInput()">
+
+      <label>Texture</label>
+      <select id="textureSelect" onchange="onTextureInput()">
+        <option value="None">Default (None)</option>
+        <option value="Checker">Checker</option>
+        <option value="Meat">Meat</option>
+        <option value="Concrete">Concrete</option>
+        <option value="Fur">Fur</option>
+      </select>
+      <div class="texture-preview" id="texturePreview"></div>
+
+      <div style="margin-top:14px;">
+        <button class="danger" onclick="deleteSelectedShapes()">Delete Selected Shape(s)</button>
+      </div>
+    </div>
+    <div class="section" id="noSelectionMsg" class="empty-msg">
+      <p class="empty-msg">Select a shape to edit its transform, material, color, and texture.</p>
+    </div>
+
+    <div class="section">
+      <h2>Export Code</h2>
+      <button class="primary" onclick="exportCode()">Generate Code</button>
+      <textarea id="exportBox" readonly placeholder="Generated (encoded) code will appear here..."></textarea>
+      <div class="btn-row">
+        <button class="small" onclick="copyExport()">Copy</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>Import Code</h2>
+      <textarea id="importBox" placeholder="Paste an encoded cosmetic code here to rebuild it..."></textarea>
+      <button onclick="importCode()">Rebuild From Code</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// =====================================================================================
+// COSMETIC CODE BUILDER
+// A standalone HTML/Three.js visual builder. Build a cosmetic by eye (drag shapes with
+// the gizmo, or type exact numbers), export it as a compact ENCODED code string, and
+// paste that same string into the companion Unity CosmeticBuilder script's
+// CompileCosmetic(string code) method to rebuild it exactly using your real shape
+// prefabs, allowed materials/colors, and textures. The exported code is not plain JSON
+// — it is XOR-obscured and Base64 encoded using the same scheme as the Unity script,
+// so it isn't casually human-readable/editable.
+// =====================================================================================
+
+// ---- Material presets (visual approximation only, doesn't need to match Unity's
+//      actual material assets pixel-for-pixel — just needs the same NAMES so Unity
+//      can look them up in its own materials list) ----
+const MATERIAL_PRESETS = {
+  Default:  { metalness: 0.2, roughness: 0.6, emissive: false, transparent: false, opacity: 1 },
+  Metallic: { metalness: 0.9, roughness: 0.2, emissive: false, transparent: false, opacity: 1 },
+  Glass:    { metalness: 0.0, roughness: 0.05, emissive: false, transparent: true, opacity: 0.35 },
+  Emissive: { metalness: 0.0, roughness: 0.5, emissive: true, transparent: false, opacity: 1 }
+};
+
+// ---- Texture names (again, only the NAME matters for Unity — it looks these up in
+//      its own `textures` list. 'Checker' is drawn procedurally; 'Meat', 'Concrete'
+//      and 'Fur' are the real reference photos, embedded below so this file stays a
+//      single standalone page with no external image files to keep track of.
+//      All texture sources are converted to GRAYSCALE on load so they never tint or
+//      fight with the shape's chosen color — they only affect shading/detail. ----
+const TEXTURE_NAMES = ['None', 'Checker', 'Meat', 'Concrete', 'Fur'];
+const textureCache = {}; // name -> HTMLCanvasElement (for reuse as a THREE texture source)
+const MAX_SHAPES = 30;
+
+// Real reference photos (downscaled/recompressed for embedding). Swap these data URIs
+// for your actual texture assets any time — nothing else needs to change.
+const TEXTURE_IMAGES = {
+  Meat: 'data:image/jpeg;base64,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',
+  Concrete: 'data:image/jpeg;base64,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',
+  Fur: 'data:image/jpeg;base64,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'
+};
+
+// ---- Head-size reference guide. This is NOT a shape — it's just a visual size/scale
+//      reference so you can eyeball cosmetic pieces against an approximate player head.
+//      It never moves with the gizmo and is never exported. Edit the offset/size here. ----
+const HEAD_REFERENCE = {
+  offset: { x: 0, y: 0, z: 0 }, // move the reference guide itself, in meters
+  radius: 0.11,                 // approx human head radius, meters
+  height: 0.24                  // approx head capsule height, meters
+};
+
+// ---- Build area. Nothing exported may sit outside this box — shape positions are
+//      clamped live as you move/scale/type them so it's impossible to end up outside
+//      it, and the box itself is drawn as a dashed wireframe reference in the scene. ----
+const BUILD_AREA = {
+  minX: -0.5, maxX: 0.5,
+  minY: -0.2, maxY: 1.0,
+  minZ: -0.5, maxZ: 0.5
+};
+
+// ---- Shared code-encoding key. Must match CodeKey in the Unity CosmeticBuilder.cs ----
+const CODE_KEY = "CosmeticKey42";
+
+let scene, camera, renderer, raycaster, mouse;
+let transformControls, gizmoDragging = false;
+let shapes = [];        // { id, type, obj (THREE.Object3D), position, rotation, scale, material, color, texture }
+let selectedIds = [];   // ordered array of currently-selected shape ids (supports multi-select)
+let nextId = 1;
+let suppressNextClick = false; // guards against the gizmo-drag-release click re-triggering selection
+
+// ---- Undo / redo history ----
+let historyStack = [];
+let redoStack = [];
+const HISTORY_LIMIT = 60;
+let editHistoryOpen = false; // true while a number-input burst is in progress, so we only snapshot once per burst
+
+// ---- Multi-select group transform pivot ----
+let multiPivot = null;       // THREE.Group used as a shared gizmo target when >1 shape selected
+let multiPivotMembers = [];  // ids of shapes currently parented under multiPivot
+
+// ---- Clipboard for copy/paste ----
+let clipboard = [];
+
+// ---- Orbit / pan camera state (hand-rolled, no external controls addon needed) ----
+let camTarget = new THREE.Vector3(0, 0, 0);
+let camRadius = 4.5;
+let camTheta = Math.PI / 4;   // horizontal angle
+let camPhi = Math.PI / 3;     // vertical angle
+let isOrbiting = false;
+let isPanning = false;
+let lastMouse = { x: 0, y: 0 };
+
+// ---- Marquee (shift-drag box) select ----
+let isMarqueeSelecting = false;
+let marqueeStart = { x: 0, y: 0 };
+let marqueeEl = null;
+
+init();
+preloadTextureImages().then(buildTexturePreviewSwatches);
+animate();
+
+function init() {
+  const viewport = document.getElementById('viewport');
+
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x14161c);
+
+  camera = new THREE.PerspectiveCamera(50, viewport.clientWidth / viewport.clientHeight, 0.05, 100);
+  updateCameraPosition();
+
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+  renderer.setPixelRatio(window.devicePixelRatio || 1);
+  viewport.appendChild(renderer.domElement);
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+  scene.add(ambient);
+  const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+  dir.position.set(3, 5, 4);
+  scene.add(dir);
+  const dir2 = new THREE.DirectionalLight(0x8899ff, 0.3);
+  dir2.position.set(-3, 2, -4);
+  scene.add(dir2);
+
+  // Ground grid
+  const grid = new THREE.GridHelper(1, 10, 0x3a3f52, 0x22242e);
+  scene.add(grid);
+
+  // Static head-size reference guide — NOT a shape, purely a scale reference. It is
+  // never added to `shapes`, never raycast-picked, and never attached to the gizmo,
+  // so it can't accidentally be selected or dragged. Its size/offset live in the
+  // HEAD_REFERENCE config above.
+  buildHeadReference();
+  buildBuildAreaGuide();
+  camTarget.set(HEAD_REFERENCE.offset.x, HEAD_REFERENCE.offset.y, HEAD_REFERENCE.offset.z);
+
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  // Manual translate/rotate/scale gizmo for the selected shape(s). Space is locked to
+  // 'local' (and never switched to 'world') so the gizmo's arrows always stay fixed to
+  // the shape's own axes — it won't re-orient itself as you orbit the camera, and it
+  // won't flip depending on your view angle relative to the shape's rotation.
+  transformControls = new THREE.TransformControls(camera, renderer.domElement);
+  transformControls.setSize(0.9);
+  transformControls.setSpace('local');
+  scene.add(transformControls);
+  transformControls.addEventListener('dragging-changed', onGizmoDraggingChanged);
+  transformControls.addEventListener('objectChange', syncFromGizmo);
+  setGizmoMode('translate');
+
+  // Mouse controls (orbit + pan + selection + marquee). Gizmo dragging takes priority.
+  renderer.domElement.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mousemove', onMouseMove);
+  window.addEventListener('mouseup', onMouseUp);
+  renderer.domElement.addEventListener('wheel', onWheel, { passive: false });
+  renderer.domElement.addEventListener('click', onClickSelect);
+  renderer.domElement.addEventListener('contextmenu', (e) => e.preventDefault());
+  renderer.domElement.addEventListener('auxclick', (e) => { if (e.button === 1) e.preventDefault(); });
+  window.addEventListener('resize', onResize);
+  window.addEventListener('keydown', onGlobalKeyDown);
+}
+
+function onResize() {
+  const viewport = document.getElementById('viewport');
+  camera.aspect = viewport.clientWidth / viewport.clientHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(viewport.clientWidth, viewport.clientHeight);
+}
+
+// =====================================================================================
+// Mouse: orbit (left-drag empty space), pan (middle-drag), marquee (shift+left-drag)
+// =====================================================================================
+
+function onMouseDown(e) {
+  if (gizmoDragging) return;
+
+  if (e.button === 1) { // middle mouse = pan, freely, not locked to any fixed point
+    isPanning = true;
+    lastMouse.x = e.clientX;
+    lastMouse.y = e.clientY;
+    e.preventDefault();
+    return;
+  }
+
+  if (e.button === 0 && e.shiftKey) {
+    beginMarquee(e);
+    return;
+  }
+
+  if (e.button === 0) {
+    isOrbiting = true;
+    lastMouse.x = e.clientX;
+    lastMouse.y = e.clientY;
+  }
+}
+
+function onMouseMove(e) {
+  if (isMarqueeSelecting) { updateMarquee(e); return; }
+  if (gizmoDragging) return;
+
+  if (isPanning) {
+    const dx = e.clientX - lastMouse.x;
+    const dy = e.clientY - lastMouse.y;
+    lastMouse.x = e.clientX;
+    lastMouse.y = e.clientY;
+    panCamera(dx, dy);
+    return;
+  }
+
+  if (!isOrbiting) return;
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  lastMouse.x = e.clientX;
+  lastMouse.y = e.clientY;
+
+  camTheta -= dx * 0.007;
+  camPhi -= dy * 0.007;
+  camPhi = Math.max(0.15, Math.min(Math.PI - 0.15, camPhi));
+  updateCameraPosition();
+}
+
+function onMouseUp(e) {
+  isOrbiting = false;
+  isPanning = false;
+  if (isMarqueeSelecting) endMarquee(e);
+}
+
+function onWheel(e) {
+  e.preventDefault();
+  camRadius += e.deltaY * 0.003;
+  camRadius = Math.max(0.4, Math.min(15, camRadius));
+  updateCameraPosition();
+}
+
+function panCamera(dxPixels, dyPixels) {
+  // Pan freely along the camera's own right/up vectors — the view is not locked to
+  // any pivot, so this just slides camTarget (and therefore the whole framing) around.
+  const panSpeed = camRadius * 0.0016;
+  const right = new THREE.Vector3();
+  camera.getWorldDirection(right);
+  right.cross(camera.up).normalize();
+  const up = new THREE.Vector3().crossVectors(right, new THREE.Vector3().subVectors(camera.position, camTarget)).normalize();
+
+  camTarget.addScaledVector(right, -dxPixels * panSpeed);
+  camTarget.addScaledVector(up, -dyPixels * panSpeed);
+  updateCameraPosition();
+}
+
+function updateCameraPosition() {
+  const x = camTarget.x + camRadius * Math.sin(camPhi) * Math.sin(camTheta);
+  const y = camTarget.y + camRadius * Math.cos(camPhi);
+  const z = camTarget.z + camRadius * Math.sin(camPhi) * Math.cos(camTheta);
+  camera.position.set(x, y, z);
+  camera.lookAt(camTarget);
+}
+
+function onClickSelect(e) {
+  if (gizmoDragging) return;
+  if (suppressNextClick) { suppressNextClick = false; return; } // was just a gizmo-drag release, not a real pick
+  if (marqueeJustFinished) { marqueeJustFinished = false; return; }
+
+  const viewport = document.getElementById('viewport');
+  const rect = viewport.getBoundingClientRect();
+  mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const meshes = [];
+  shapes.forEach(s => s.obj.traverse(o => { if (o.isMesh) meshes.push(o); }));
+  const hits = raycaster.intersectObjects(meshes, false);
+
+  if (hits.length > 0) {
+    let hitObj = hits[0].object;
+    while (hitObj.parent && !hitObj.userData.shapeId) hitObj = hitObj.parent;
+    if (hitObj.userData.shapeId) {
+      if (e.shiftKey) {
+        toggleSelection(hitObj.userData.shapeId);
+      } else {
+        setSelection([hitObj.userData.shapeId]);
+      }
+    }
+  } else if (!e.shiftKey) {
+    // Clicked empty space with no modifier — clear selection.
+    setSelection([]);
+  }
+}
+
+// =====================================================================================
+// Marquee (rubber-band) select
+// =====================================================================================
+
+let marqueeJustFinished = false;
+
+function beginMarquee(e) {
+  isMarqueeSelecting = true;
+  const viewport = document.getElementById('viewport');
+  const rect = viewport.getBoundingClientRect();
+  marqueeStart.x = e.clientX - rect.left;
+  marqueeStart.y = e.clientY - rect.top;
+
+  marqueeEl = document.createElement('div');
+  marqueeEl.style.position = 'absolute';
+  marqueeEl.style.border = '1px solid var(--accent)';
+  marqueeEl.style.background = 'rgba(108,140,255,0.15)';
+  marqueeEl.style.pointerEvents = 'none';
+  marqueeEl.style.left = marqueeStart.x + 'px';
+  marqueeEl.style.top = marqueeStart.y + 'px';
+  marqueeEl.style.width = '0px';
+  marqueeEl.style.height = '0px';
+  marqueeEl.style.zIndex = 5;
+  viewport.appendChild(marqueeEl);
+}
+
+function updateMarquee(e) {
+  const viewport = document.getElementById('viewport');
+  const rect = viewport.getBoundingClientRect();
+  const curX = e.clientX - rect.left;
+  const curY = e.clientY - rect.top;
+  const left = Math.min(curX, marqueeStart.x);
+  const top = Math.min(curY, marqueeStart.y);
+  const w = Math.abs(curX - marqueeStart.x);
+  const h = Math.abs(curY - marqueeStart.y);
+  marqueeEl.style.left = left + 'px';
+  marqueeEl.style.top = top + 'px';
+  marqueeEl.style.width = w + 'px';
+  marqueeEl.style.height = h + 'px';
+}
+
+function endMarquee(e) {
+  isMarqueeSelecting = false;
+  const viewport = document.getElementById('viewport');
+  const rect = viewport.getBoundingClientRect();
+  const curX = e.clientX - rect.left;
+  const curY = e.clientY - rect.top;
+  const left = Math.min(curX, marqueeStart.x);
+  const top = Math.min(curY, marqueeStart.y);
+  const right = Math.max(curX, marqueeStart.x);
+  const bottom = Math.max(curY, marqueeStart.y);
+
+  if (marqueeEl) { marqueeEl.remove(); marqueeEl = null; }
+  marqueeJustFinished = true; // swallow the click event that follows mouseup
+
+  // Only treat as a real box-select if the user actually dragged a bit.
+  if (Math.abs(right - left) < 3 && Math.abs(bottom - top) < 3) return;
+
+  const hitIds = [];
+  shapes.forEach(s => {
+    const p = new THREE.Vector3();
+    s.obj.getWorldPosition(p);
+    const proj = p.clone().project(camera);
+    const sx = (proj.x * 0.5 + 0.5) * rect.width;
+    const sy = (-proj.y * 0.5 + 0.5) * rect.height;
+    if (proj.z < 1 && sx >= left && sx <= right && sy >= top && sy <= bottom) {
+      hitIds.push(s.id);
+    }
+  });
+
+  if (hitIds.length) {
+    const merged = new Set(selectedIds);
+    hitIds.forEach(id => merged.add(id));
+    setSelection(Array.from(merged));
+  }
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+
+// =====================================================================================
+// Selection (single + multi) and gizmo attachment
+// =====================================================================================
+
+function setSelection(ids) {
+  selectedIds = ids.slice();
+  syncGizmoToSelection();
+  refreshShapeList();
+  refreshInspector();
+}
+
+function toggleSelection(id) {
+  const idx = selectedIds.indexOf(id);
+  if (idx === -1) selectedIds.push(id);
+  else selectedIds.splice(idx, 1);
+  syncGizmoToSelection();
+  refreshShapeList();
+  refreshInspector();
+}
+
+function getSelectedShapes() {
+  return selectedIds.map(id => shapes.find(s => s.id === id)).filter(Boolean);
+}
+
+function getSelected() {
+  // Legacy single-shape accessor — returns the primary (first) selected shape.
+  return selectedIds.length ? (shapes.find(s => s.id === selectedIds[0]) || null) : null;
+}
+
+// Attaches the gizmo either directly to a single selected shape, or to a temporary
+// pivot Group when multiple shapes are selected so they move/rotate/scale together.
+function syncGizmoToSelection() {
+  teardownMultiPivot(); // always start clean; rebuilt below if needed
+
+  const sel = getSelectedShapes();
+  removeSelectionAxes();
+
+  if (sel.length === 0) {
+    transformControls.detach();
+    return;
+  }
+
+  if (sel.length === 1) {
+    transformControls.attach(sel[0].obj);
+    attachSelectionAxes(sel[0]);
+    return;
+  }
+
+  // Multi-select: build a pivot at the centroid of the selected shapes' world
+  // positions, reparent each selected object under it (preserving world transform),
+  // and attach the gizmo to the pivot so translate/rotate/scale apply to the group.
+  const centroid = new THREE.Vector3();
+  sel.forEach(s => { const p = new THREE.Vector3(); s.obj.getWorldPosition(p); centroid.add(p); });
+  centroid.multiplyScalar(1 / sel.length);
+
+  multiPivot = new THREE.Group();
+  multiPivot.position.copy(centroid);
+  scene.add(multiPivot);
+
+  sel.forEach(s => {
+    const worldPos = new THREE.Vector3();
+    const worldQuat = new THREE.Quaternion();
+    const worldScale = new THREE.Vector3();
+    s.obj.getWorldPosition(worldPos);
+    s.obj.getWorldQuaternion(worldQuat);
+    s.obj.getWorldScale(worldScale);
+
+    scene.remove(s.obj);
+    multiPivot.add(s.obj);
+
+    // Pivot has identity rotation/scale, so local = world - pivot position (translation only).
+    s.obj.position.copy(worldPos).sub(multiPivot.position);
+    s.obj.quaternion.copy(worldQuat);
+    s.obj.scale.copy(worldScale);
+  });
+  multiPivotMembers = sel.map(s => s.id);
+
+  transformControls.attach(multiPivot);
+}
+
+// Reparents any shapes currently held under multiPivot back into the scene directly,
+// baking the pivot's transform into each shape's stored position/rotation/scale.
+function teardownMultiPivot() {
+  if (!multiPivot) { multiPivotMembers = []; return; }
+
+  multiPivotMembers.forEach(id => {
+    const shape = shapes.find(s => s.id === id);
+    if (!shape) return;
+    const worldPos = new THREE.Vector3();
+    const worldQuat = new THREE.Quaternion();
+    const worldScale = new THREE.Vector3();
+    shape.obj.getWorldPosition(worldPos);
+    shape.obj.getWorldQuaternion(worldQuat);
+    shape.obj.getWorldScale(worldScale);
+
+    multiPivot.remove(shape.obj);
+    scene.add(shape.obj);
+
+    shape.obj.position.copy(worldPos);
+    shape.obj.quaternion.copy(worldQuat);
+    shape.obj.scale.copy(worldScale);
+    clampObjToBuildArea(shape.obj);
+
+    const euler = new THREE.Euler().setFromQuaternion(shape.obj.quaternion, 'XYZ');
+    shape.position.x = shape.obj.position.x;
+    shape.position.y = shape.obj.position.y;
+    shape.position.z = shape.obj.position.z;
+    shape.rotation.x = THREE.MathUtils.radToDeg(euler.x);
+    shape.rotation.y = THREE.MathUtils.radToDeg(euler.y);
+    shape.rotation.z = THREE.MathUtils.radToDeg(euler.z);
+    shape.scale.x = shape.obj.scale.x;
+    shape.scale.y = shape.obj.scale.y;
+    shape.scale.z = shape.obj.scale.z;
+  });
+
+  scene.remove(multiPivot);
+  multiPivot = null;
+  multiPivotMembers = [];
+}
+
+// =====================================================================================
+// Gizmo
+// =====================================================================================
+
+function setGizmoMode(mode) {
+  transformControls.setMode(mode);
+  ['gizmoMove', 'gizmoRotate', 'gizmoScale'].forEach(id => document.getElementById(id).classList.remove('active'));
+  const map = { translate: 'gizmoMove', rotate: 'gizmoRotate', scale: 'gizmoScale' };
+  document.getElementById(map[mode]).classList.add('active');
+}
+
+function onGizmoDraggingChanged(e) {
+  gizmoDragging = e.value;
+  if (e.value) {
+    saveHistory(); // snapshot the pre-drag state once, at drag start
+  } else {
+    suppressNextClick = true; // the click that follows mouseup should not change selection
+    if (multiPivot) {
+      // Keep the group parented for now; rebuild members' stored transforms live via
+      // syncFromGizmo on every change, and fully unbake on next selection change.
+      multiPivotMembers.forEach(id => {
+        const shape = shapes.find(s => s.id === id);
+        if (shape) clampObjToBuildArea(shape.obj, true);
+      });
+    } else {
+      const shape = getSelected();
+      if (shape) clampObjToBuildArea(shape.obj);
+      if (shape) syncShapeFromObj(shape);
+    }
+  }
+}
+
+// Builds the static, non-interactive head-size reference guide from HEAD_REFERENCE.
+// Rendered as a translucent wireframe so it never gets confused for an actual shape,
+// and deliberately kept out of `scene`'s pickable set (it's just not added to
+// `shapes`, so onClickSelect's raycaster never sees it).
+function buildHeadReference() {
+  const group = new THREE.Group();
+  const r = HEAD_REFERENCE.radius;
+  const h = Math.max(HEAD_REFERENCE.height - r * 2, 0.001);
+
+  const wireMat = new THREE.MeshBasicMaterial({ color: 0x6c8cff, wireframe: true, transparent: true, opacity: 0.5 });
+
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 16, 1, true), wireMat);
+  const capTop = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), wireMat);
+  const capBottom = new THREE.Mesh(new THREE.SphereGeometry(r, 16, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), wireMat);
+  capTop.position.y = h / 2;
+  capBottom.position.y = -h / 2;
+  group.add(body, capTop, capBottom);
+
+  // Small forward tick on the reference guide itself, so "front" is obvious even
+  // with nothing selected yet. Local +Z, matching Unity's forward convention.
+  const frontTick = new THREE.Mesh(
+    new THREE.ConeGeometry(0.015, 0.05, 8),
+    new THREE.MeshBasicMaterial({ color: 0x5c9cff })
+  );
+  frontTick.rotation.x = Math.PI / 2;
+  frontTick.position.set(0, 0, r + 0.025);
+  group.add(frontTick);
+
+  group.position.set(HEAD_REFERENCE.offset.x, HEAD_REFERENCE.offset.y, HEAD_REFERENCE.offset.z);
+  group.renderOrder = -1;
+  scene.add(group);
+}
+
+// Draws a dashed wireframe box showing the build area (BUILD_AREA). Purely a visual
+// guide, never pickable, never exported — matches the bounds shapes are clamped to.
+function buildBuildAreaGuide() {
+  const w = BUILD_AREA.maxX - BUILD_AREA.minX;
+  const hgt = BUILD_AREA.maxY - BUILD_AREA.minY;
+  const d = BUILD_AREA.maxZ - BUILD_AREA.minZ;
+  const cx = (BUILD_AREA.maxX + BUILD_AREA.minX) / 2;
+  const cy = (BUILD_AREA.maxY + BUILD_AREA.minY) / 2;
+  const cz = (BUILD_AREA.maxZ + BUILD_AREA.minZ) / 2;
+
+  const geo = new THREE.BoxGeometry(w, hgt, d);
+  const edges = new THREE.EdgesGeometry(geo);
+  const mat = new THREE.LineDashedMaterial({ color: 0x8a90a4, dashSize: 0.04, gapSize: 0.03, transparent: true, opacity: 0.6 });
+  const line = new THREE.LineSegments(edges, mat);
+  line.computeLineDistances();
+  line.position.set(cx, cy, cz);
+  line.renderOrder = -1;
+  scene.add(line);
+}
+
+// Forward/orientation indicator shown on whichever shape is currently selected —
+// standard RGB axes (red=X, green=Y, blue=Z) drawn in the shape's LOCAL space, so the
+// blue arrow always points along that shape's own front regardless of its rotation.
+let selectionAxes = null;
+function attachSelectionAxes(shape) {
+  removeSelectionAxes();
+  if (!shape) return;
+  selectionAxes = new THREE.AxesHelper(0.6);
+  shape.obj.add(selectionAxes);
+}
+function removeSelectionAxes() {
+  if (selectionAxes) {
+    if (selectionAxes.parent) selectionAxes.parent.remove(selectionAxes);
+    selectionAxes = null;
+  }
+}
+
+// Clamps an Object3D's position so it (and a rough allowance for its scale) stays
+// inside BUILD_AREA. `isLocalToPivot` is true when obj is currently parented under
+// multiPivot, in which case we clamp using its world position instead of local.
+function clampObjToBuildArea(obj, isLocalToPivot) {
+  let worldPos;
+  if (isLocalToPivot) {
+    worldPos = new THREE.Vector3();
+    obj.getWorldPosition(worldPos);
+  } else {
+    worldPos = obj.position;
+  }
+
+  const clampedX = THREE.MathUtils.clamp(worldPos.x, BUILD_AREA.minX, BUILD_AREA.maxX);
+  const clampedY = THREE.MathUtils.clamp(worldPos.y, BUILD_AREA.minY, BUILD_AREA.maxY);
+  const clampedZ = THREE.MathUtils.clamp(worldPos.z, BUILD_AREA.minZ, BUILD_AREA.maxZ);
+
+  if (isLocalToPivot) {
+    const delta = new THREE.Vector3(clampedX - worldPos.x, clampedY - worldPos.y, clampedZ - worldPos.z);
+    obj.position.add(delta); // approximate: pivot has no rotation/scale, so local delta == world delta
+  } else {
+    obj.position.set(clampedX, clampedY, clampedZ);
+  }
+}
+
+function clampShapePosition(shape) {
+  shape.position.x = THREE.MathUtils.clamp(shape.position.x, BUILD_AREA.minX, BUILD_AREA.maxX);
+  shape.position.y = THREE.MathUtils.clamp(shape.position.y, BUILD_AREA.minY, BUILD_AREA.maxY);
+  shape.position.z = THREE.MathUtils.clamp(shape.position.z, BUILD_AREA.minZ, BUILD_AREA.maxZ);
+}
+
+// Called whenever the gizmo actually moves/rotates/scales the attached object.
+function syncFromGizmo() {
+  if (multiPivot) {
+    // Live-clamp each member as the group moves, and keep the inspector fields in
+    // step if only one shape happens to be selected via the pivot path.
+    refreshInspector();
+    return;
+  }
+  const shape = getSelected();
+  if (!shape) return;
+  syncShapeFromObj(shape);
+  clampObjToBuildArea(shape.obj);
+  syncShapeFromObj(shape);
+  refreshInspector();
+}
+
+function syncShapeFromObj(shape) {
+  shape.position.x = shape.obj.position.x;
+  shape.position.y = shape.obj.position.y;
+  shape.position.z = shape.obj.position.z;
+  shape.rotation.x = THREE.MathUtils.radToDeg(shape.obj.rotation.x);
+  shape.rotation.y = THREE.MathUtils.radToDeg(shape.obj.rotation.y);
+  shape.rotation.z = THREE.MathUtils.radToDeg(shape.obj.rotation.z);
+  shape.scale.x = shape.obj.scale.x;
+  shape.scale.y = shape.obj.scale.y;
+  shape.scale.z = shape.obj.scale.z;
+}
+
+// =====================================================================================
+// Shape creation
+// =====================================================================================
+
+// Base geometries stay at their TRUE size (a scale of 1.0 = actual real-world size,
+// matching Unity's real prefabs 1:1). We don't shrink the geometry itself — that would
+// silently make an exported "scale: 1" mean something different than it says. Instead,
+// newly-added shapes just start with an initial scale of 0.5 (see addShape) so they
+// spawn in visually smaller without lying about their size in the exported code.
+function createGeometryGroup(type) {
+  const group = new THREE.Group();
+
+  if (type === 'Cube') {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1));
+    group.add(mesh);
+  } else if (type === 'Sphere') {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 16));
+    group.add(mesh);
+  } else if (type === 'Cylinder') {
+    const mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 2, 20));
+    group.add(mesh);
+  } else if (type === 'Capsule') {
+    // Built from a cylinder body + two sphere caps (three r128 has no CapsuleGeometry).
+    const r = 0.5, h = 1;
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 18, 1, true));
+    const capTop = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2));
+    const capBottom = new THREE.Mesh(new THREE.SphereGeometry(r, 18, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2));
+    capTop.position.y = h / 2;
+    capBottom.position.y = -h / 2;
+    group.add(body, capTop, capBottom);
+  }
+
+  return group;
+}
+
+// ---- Texture preview canvases (local visual only — Unity uses its own texture
+//      assets looked up by the same NAME). 'Meat'/'Concrete'/'Fur' are drawn from the
+//      real embedded photos once preloaded and immediately desaturated to grayscale so
+//      they never fight with the shape's chosen color tint; 'Checker' is procedural
+//      grayscale; 'None' stays a flat swatch. All canvases are drawn with image
+//      smoothing OFF so textures stay crisp/sharp instead of going blurry/bilinear. ----
+function getTextureCanvas(name) {
+  if (textureCache[name]) return textureCache[name];
+
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.imageSmoothingEnabled = false;
+  ctx.fillStyle = '#e8eaf0';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#2a2f3d';
+
+  if (name === 'Checker') {
+    const cell = size / 8;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+      if ((x + y) % 2 === 0) ctx.fillRect(x * cell, y * cell, cell, cell);
+    }
+  }
+  // 'None' just stays the flat base fill. 'Meat' / 'Concrete' / 'Fur' are populated
+  // directly by preloadTextureImages() once their source photo has loaded.
+
+  textureCache[name] = canvas;
+  return canvas;
+}
+
+// Converts a canvas's pixels to grayscale in place (luminance-weighted).
+function desaturateCanvas(canvas) {
+  const ctx = canvas.getContext('2d');
+  const size = canvas.width;
+  const imgData = ctx.getImageData(0, 0, size, canvas.height);
+  const d = imgData.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const lum = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    d[i] = d[i + 1] = d[i + 2] = lum;
+  }
+  ctx.putImageData(imgData, 0, 0);
+}
+
+// Loads the real reference photos into canvases before the UI needs them, then
+// desaturates them to grayscale. Since they're embedded data URIs this resolves
+// essentially instantly, but it's still async (Image.onload), so callers wait on the
+// returned Promise rather than assuming the canvases are ready straight away.
+function preloadTextureImages() {
+  const names = Object.keys(TEXTURE_IMAGES);
+  const loads = names.map(name => new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const size = 128;
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, 0, 0, size, size);
+      desaturateCanvas(canvas);
+      textureCache[name] = canvas;
+      resolve();
+    };
+    img.onerror = () => resolve(); // fall through to the flat placeholder canvas
+    img.src = TEXTURE_IMAGES[name];
+  }));
+  return Promise.all(loads);
+}
+
+function buildTexturePreviewSwatches() {
+  const container = document.getElementById('texturePreview');
+  container.innerHTML = '';
+  TEXTURE_NAMES.forEach(name => {
+    const cell = document.createElement('div');
+    cell.className = 'texture-swatch';
+    cell.title = name;
+    cell.dataset.texture = name;
+    const canvas = getTextureCanvas(name);
+    const clone = document.createElement('canvas');
+    clone.width = clone.height = 40;
+    const cctx = clone.getContext('2d');
+    cctx.imageSmoothingEnabled = false;
+    cctx.drawImage(canvas, 0, 0, 40, 40);
+    cell.appendChild(clone);
+    cell.onclick = () => {
+      document.getElementById('textureSelect').value = name;
+      onTextureInput();
+    };
+    container.appendChild(cell);
+  });
+}
+
+function highlightTextureSwatch(name) {
+  document.querySelectorAll('.texture-swatch').forEach(el => {
+    el.classList.toggle('selected', el.dataset.texture === name);
+  });
+}
+
+function buildMaterial(materialName, colorHex, textureName) {
+  const preset = MATERIAL_PRESETS[materialName] || MATERIAL_PRESETS.Default;
+  const color = new THREE.Color(colorHex);
+  const params = {
+    color: color,
+    metalness: preset.metalness,
+    roughness: preset.roughness,
+    emissive: preset.emissive ? color : 0x000000,
+    emissiveIntensity: preset.emissive ? 1.1 : 1,
+    transparent: !!preset.transparent,
+    opacity: preset.opacity !== undefined ? preset.opacity : 1
+  };
+  if (textureName && textureName !== 'None') {
+    const tex = new THREE.CanvasTexture(getTextureCanvas(textureName));
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(2, 2);
+    // Keep textures crisp/sharp instead of smoothed (bilinear/mipmapped) so detail
+    // doesn't go blurry, especially at close zoom.
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.generateMipmaps = false;
+    params.map = tex;
+  }
+  return new THREE.MeshStandardMaterial(params);
+}
+
+function applyMaterialToShape(shape) {
+  const mat = buildMaterial(shape.material, shape.color, shape.texture);
+  shape.obj.traverse(o => { if (o.isMesh) o.material = mat; });
+}
+
+function applyTransformToShape(shape) {
+  shape.obj.position.set(shape.position.x, shape.position.y, shape.position.z);
+  shape.obj.rotation.set(
+    THREE.MathUtils.degToRad(shape.rotation.x),
+    THREE.MathUtils.degToRad(shape.rotation.y),
+    THREE.MathUtils.degToRad(shape.rotation.z)
+  );
+  shape.obj.scale.set(shape.scale.x, shape.scale.y, shape.scale.z);
+}
+
+function addShape(type) {
+  if (shapes.length >= MAX_SHAPES) {
+    alert(`You can have at most ${MAX_SHAPES} shapes in a single cosmetic.`);
+    return;
+  }
+  saveHistory();
+
+  const id = nextId++;
+  const obj = createGeometryGroup(type);
+  obj.userData.shapeId = id;
+
+  const shape = {
+    id: id,
+    type: type,
+    obj: obj,
+    position: { x: 0, y: 0.9, z: 0 },
+    rotation: { x: 0, y: 0, z: 0 },
+    scale: { x: 0.5, y: 0.5, z: 0.5 }, // spawns in smaller; the exported "scale" value still accurately reflects real size
+    material: 'Default',
+    color: '#6c8cff',
+    texture: 'None'
+  };
+
+  applyTransformToShape(shape);
+  applyMaterialToShape(shape);
+  scene.add(obj);
+  shapes.push(shape);
+  setSelection([id]);
+  refreshShapeList();
+}
+
+function deleteSelectedShapes() {
+  if (selectedIds.length === 0) return;
+  saveHistory();
+  teardownMultiPivot();
+  transformControls.detach();
+  removeSelectionAxes();
+
+  const toDelete = new Set(selectedIds);
+  shapes.forEach(s => { if (toDelete.has(s.id)) scene.remove(s.obj); });
+  shapes = shapes.filter(s => !toDelete.has(s.id));
+
+  selectedIds = [];
+  refreshShapeList();
+  refreshInspector();
+}
+
+function resetAll() {
+  saveHistory();
+  teardownMultiPivot();
+  shapes.forEach(s => scene.remove(s.obj));
+  shapes = [];
+  transformControls.detach();
+  removeSelectionAxes();
+  selectedIds = [];
+  refreshShapeList();
+  refreshInspector();
+  document.getElementById('exportBox').value = '';
+}
+
+function selectShape(id) {
+  setSelection([id]);
+}
+
+// =====================================================================================
+// UI sync
+// =====================================================================================
+
+function refreshShapeList() {
+  const list = document.getElementById('shapeList');
+  const countEl = document.getElementById('shapeCount');
+  const emptyMsg = document.getElementById('emptyMsg');
+  list.innerHTML = '';
+  countEl.textContent = shapes.length ? `(${shapes.length}/${MAX_SHAPES})` : '';
+  emptyMsg.style.display = shapes.length ? 'none' : 'block';
+
+  shapes.forEach((s, i) => {
+    const li = document.createElement('li');
+    li.className = selectedIds.includes(s.id) ? 'selected' : '';
+    li.onclick = (e) => {
+      if (e.shiftKey) toggleSelection(s.id);
+      else setSelection([s.id]);
+    };
+
+    const label = document.createElement('span');
+    label.textContent = `${s.type} ${i + 1}`;
+    li.appendChild(label);
+
+    const del = document.createElement('span');
+    del.textContent = '✕';
+    del.className = 'del';
+    del.onclick = (e) => {
+      e.stopPropagation();
+      saveHistory();
+      if (multiPivotMembers.includes(s.id)) teardownMultiPivot();
+      scene.remove(s.obj);
+      shapes = shapes.filter(x => x.id !== s.id);
+      selectedIds = selectedIds.filter(id => id !== s.id);
+      if (selectedIds.length === 0) { transformControls.detach(); removeSelectionAxes(); }
+      else { syncGizmoToSelection(); }
+      refreshShapeList();
+      refreshInspector();
+    };
+    li.appendChild(del);
+
+    list.appendChild(li);
+  });
+}
+
+function refreshInspector() {
+  const shape = getSelected();
+  const section = document.getElementById('transformSection');
+  const noSel = document.getElementById('noSelectionMsg');
+
+  if (!shape) {
+    section.style.display = 'none';
+    noSel.style.display = 'block';
+    return;
+  }
+
+  section.style.display = 'block';
+  noSel.style.display = 'none';
+
+  const multi = selectedIds.length > 1;
+
+  document.getElementById('posX').value = shape.position.x.toFixed(2);
+  document.getElementById('posY').value = shape.position.y.toFixed(2);
+  document.getElementById('posZ').value = shape.position.z.toFixed(2);
+  document.getElementById('rotX').value = shape.rotation.x.toFixed(0);
+  document.getElementById('rotY').value = shape.rotation.y.toFixed(0);
+  document.getElementById('rotZ').value = shape.rotation.z.toFixed(0);
+  document.getElementById('scaleX').value = shape.scale.x.toFixed(2);
+  document.getElementById('scaleY').value = shape.scale.y.toFixed(2);
+  document.getElementById('scaleZ').value = shape.scale.z.toFixed(2);
+  document.getElementById('materialSelect').value = shape.material;
+  document.getElementById('colorInput').value = shape.color;
+  document.getElementById('textureSelect').value = shape.texture || 'None';
+  highlightTextureSwatch(multi ? null : (shape.texture || 'None'));
+
+  const delBtn = document.querySelector('#transformSection .danger');
+  if (delBtn) delBtn.textContent = multi ? `Delete ${selectedIds.length} Selected Shapes` : 'Delete Selected Shape';
+}
+
+function beginEditHistory() {
+  if (!editHistoryOpen) {
+    saveHistory();
+    editHistoryOpen = true;
+  }
+}
+function endEditHistory() {
+  editHistoryOpen = false;
+}
+
+function onTransformInput() {
+  // Direct numeric edits only make sense for a single selected shape (with multiple
+  // shapes selected the fields show the primary shape's values but editing them here
+  // just edits that one shape — use the gizmo for group moves).
+  const shape = getSelected();
+  if (!shape) return;
+
+  shape.position.x = parseFloat(document.getElementById('posX').value) || 0;
+  shape.position.y = parseFloat(document.getElementById('posY').value) || 0;
+  shape.position.z = parseFloat(document.getElementById('posZ').value) || 0;
+  shape.rotation.x = parseFloat(document.getElementById('rotX').value) || 0;
+  shape.rotation.y = parseFloat(document.getElementById('rotY').value) || 0;
+  shape.rotation.z = parseFloat(document.getElementById('rotZ').value) || 0;
+  shape.scale.x = Math.max(0.01, parseFloat(document.getElementById('scaleX').value) || 0.01);
+  shape.scale.y = Math.max(0.01, parseFloat(document.getElementById('scaleY').value) || 0.01);
+  shape.scale.z = Math.max(0.01, parseFloat(document.getElementById('scaleZ').value) || 0.01);
+
+  clampShapePosition(shape);
+  applyTransformToShape(shape);
+}
+
+function onMaterialInput() {
+  const shape = getSelected();
+  if (!shape) return;
+  saveHistory();
+  shape.material = document.getElementById('materialSelect').value;
+  applyMaterialToShape(shape);
+}
+
+function onColorInput() {
+  const shape = getSelected();
+  if (!shape) return;
+  shape.color = document.getElementById('colorInput').value;
+  applyMaterialToShape(shape);
+}
+
+function onTextureInput() {
+  const shape = getSelected();
+  if (!shape) return;
+  saveHistory();
+  shape.texture = document.getElementById('textureSelect').value;
+  applyMaterialToShape(shape);
+  highlightTextureSwatch(shape.texture);
+}
+
+// =====================================================================================
+// Undo / redo
+// =====================================================================================
+
+// Reads each shape's CURRENT WORLD transform directly, whether or not it's presently
+// parented under multiPivot. This is deliberately non-destructive — it never touches
+// the scene graph — so it's safe to call mid-drag (e.g. right when a group-drag
+// starts) without breaking TransformControls' attachment to whatever it's holding.
+function cloneStateForHistory() {
+  const pos = new THREE.Vector3();
+  const quat = new THREE.Quaternion();
+  const scl = new THREE.Vector3();
+  return {
+    nextId: nextId,
+    shapes: shapes.map(s => {
+      s.obj.getWorldPosition(pos);
+      s.obj.getWorldQuaternion(quat);
+      s.obj.getWorldScale(scl);
+      const euler = new THREE.Euler().setFromQuaternion(quat, 'XYZ');
+      return {
+        type: s.type,
+        position: { x: pos.x, y: pos.y, z: pos.z },
+        rotation: {
+          x: THREE.MathUtils.radToDeg(euler.x),
+          y: THREE.MathUtils.radToDeg(euler.y),
+          z: THREE.MathUtils.radToDeg(euler.z)
+        },
+        scale: { x: scl.x, y: scl.y, z: scl.z },
+        material: s.material,
+        color: s.color,
+        texture: s.texture,
+        id: s.id
+      };
+    })
+  };
+}
+
+function saveHistory() {
+  // NOTE: deliberately does NOT tear down multiPivot — this can be called the moment
+  // a group-drag starts (dragging-changed fires before any movement), and destroying
+  // the pivot out from under TransformControls at that instant is what caused the
+  // "must be part of the scene graph" error. cloneStateForHistory() reads world
+  // transforms directly instead, so no scene-graph mutation is needed here.
+  historyStack.push(cloneStateForHistory());
+  if (historyStack.length > HISTORY_LIMIT) historyStack.shift();
+  redoStack = [];
+}
+
+function restoreState(state) {
+  teardownMultiPivot();
+  transformControls.detach();
+  removeSelectionAxes();
+  shapes.forEach(s => scene.remove(s.obj));
+  shapes = [];
+  selectedIds = [];
+
+  state.shapes.forEach(sj => {
+    const obj = createGeometryGroup(sj.type);
+    obj.userData.shapeId = sj.id;
+    const shape = {
+      id: sj.id,
+      type: sj.type,
+      obj: obj,
+      position: { ...sj.position },
+      rotation: { ...sj.rotation },
+      scale: { ...sj.scale },
+      material: sj.material,
+      color: sj.color,
+      texture: sj.texture
+    };
+    applyTransformToShape(shape);
+    applyMaterialToShape(shape);
+    scene.add(obj);
+    shapes.push(shape);
+  });
+  nextId = state.nextId;
+
+  refreshShapeList();
+  refreshInspector();
+}
+
+function undo() {
+  if (!historyStack.length) return;
+  teardownMultiPivot();
+  redoStack.push(cloneStateForHistory());
+  restoreState(historyStack.pop());
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  teardownMultiPivot();
+  historyStack.push(cloneStateForHistory());
+  restoreState(redoStack.pop());
+}
+
+// =====================================================================================
+// Copy / paste
+// =====================================================================================
+
+function copySelection() {
+  const sel = getSelectedShapes();
+  if (!sel.length) return;
+  clipboard = sel.map(s => ({
+    type: s.type,
+    position: { ...s.position },
+    rotation: { ...s.rotation },
+    scale: { ...s.scale },
+    material: s.material,
+    color: s.color,
+    texture: s.texture
+  }));
+}
+
+function pasteClipboard() {
+  if (!clipboard.length) return;
+  if (shapes.length >= MAX_SHAPES) {
+    alert(`You can have at most ${MAX_SHAPES} shapes in a single cosmetic.`);
+    return;
+  }
+  saveHistory();
+
+  const newIds = [];
+  for (const cj of clipboard) {
+    if (shapes.length >= MAX_SHAPES) break;
+    const id = nextId++;
+    const obj = createGeometryGroup(cj.type);
+    obj.userData.shapeId = id;
+    const shape = {
+      id: id,
+      type: cj.type,
+      obj: obj,
+      position: { x: cj.position.x + 0.08, y: cj.position.y, z: cj.position.z + 0.08 },
+      rotation: { ...cj.rotation },
+      scale: { ...cj.scale },
+      material: cj.material,
+      color: cj.color,
+      texture: cj.texture
+    };
+    clampShapePosition(shape);
+    applyTransformToShape(shape);
+    applyMaterialToShape(shape);
+    scene.add(obj);
+    shapes.push(shape);
+    newIds.push(id);
+  }
+
+  setSelection(newIds);
+  refreshShapeList();
+}
+
+// =====================================================================================
+// Global keyboard shortcuts
+// =====================================================================================
+
+function onGlobalKeyDown(e) {
+  const tag = (document.activeElement && document.activeElement.tagName) || '';
+  const typingInField = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  const mod = e.ctrlKey || e.metaKey;
+
+  if (mod && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+    e.preventDefault();
+    undo();
+    return;
+  }
+  if (mod && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) {
+    e.preventDefault();
+    redo();
+    return;
+  }
+  if (typingInField) return; // don't hijack copy/paste/delete while typing in a field
+
+  if (mod && e.key.toLowerCase() === 'c') {
+    e.preventDefault();
+    copySelection();
+    return;
+  }
+  if (mod && e.key.toLowerCase() === 'v') {
+    e.preventDefault();
+    pasteClipboard();
+    return;
+  }
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    deleteSelectedShapes();
+    return;
+  }
+}
+
+// =====================================================================================
+// Encoding — must match CosmeticBuilder.EncodeCosmeticCode / DecodeCosmeticCode in Unity
+// (XOR against a repeating key, then Base64). This is obfuscation, not real security —
+// it just keeps the exported code from being plain, casually-editable JSON.
+// =====================================================================================
+
+function xorBytes(bytes) {
+  const out = new Uint8Array(bytes.length);
+  for (let i = 0; i < bytes.length; i++) {
+    out[i] = bytes[i] ^ CODE_KEY.charCodeAt(i % CODE_KEY.length);
+  }
+  return out;
+}
+
+function encodeCosmeticCode(jsonStr) {
+  const bytes = new TextEncoder().encode(jsonStr);
+  const xored = xorBytes(bytes);
+  let binary = '';
+  xored.forEach(b => binary += String.fromCharCode(b));
+  return btoa(binary);
+}
+
+function decodeCosmeticCode(code) {
+  const binary = atob(code);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const unxored = xorBytes(bytes);
+  return new TextDecoder().decode(unxored);
+}
+
+// =====================================================================================
+// Export / Import — the JSON shape (before encoding) matches Unity's
+// CosmeticBuilder.CompileCosmetic() / GenerateCosmeticCode()
+// =====================================================================================
+
+function exportCode() {
+  teardownMultiPivot();
+
+  // Nothing can actually be outside BUILD_AREA at this point since positions are
+  // clamped live as shapes are moved/scaled/typed — this is a final safety net.
+  shapes.forEach(s => clampShapePosition(s));
+
+  const data = {
+    shapes: shapes.map(s => ({
+      shape: s.type,
+      offset: [round(s.position.x), round(s.position.y), round(s.position.z)],
+      rotation: [round(s.rotation.x), round(s.rotation.y), round(s.rotation.z)],
+      scale: [round(s.scale.x), round(s.scale.y), round(s.scale.z)],
+      material: s.material,
+      color: '#' + s.color.replace('#', '').toUpperCase(),
+      texture: s.texture || 'None'
+    }))
+  };
+  document.getElementById('exportBox').value = encodeCosmeticCode(JSON.stringify(data));
+}
+
+function round(n) { return Math.round(n * 1000) / 1000; }
+
+function copyExport() {
+  const box = document.getElementById('exportBox');
+  box.select();
+  document.execCommand('copy');
+}
+
+function importCode() {
+  const text = document.getElementById('importBox').value.trim();
+  if (!text) return;
+
+  let jsonText;
+  try {
+    jsonText = decodeCosmeticCode(text);
+  } catch (e) {
+    // Not valid encoded data — fall back to treating the input as raw JSON,
+    // which is handy for hand-written test codes.
+    jsonText = text;
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch (e) {
+    alert('Could not parse that code — check it was copied in full.');
+    return;
+  }
+
+  if (!parsed || !Array.isArray(parsed.shapes)) {
+    alert('Code did not contain a "shapes" array.');
+    return;
+  }
+
+  saveHistory();
+  resetAllSilent();
+
+  let skipped = 0;
+  parsed.shapes.forEach(sj => {
+    if (!sj || !sj.shape) return;
+    const type = sj.shape;
+    if (!['Cube', 'Sphere', 'Capsule', 'Cylinder'].includes(type)) return;
+    if (shapes.length >= MAX_SHAPES) { skipped++; return; }
+
+    const id = nextId++;
+    const obj = createGeometryGroup(type);
+    obj.userData.shapeId = id;
+
+    const shape = {
+      id: id,
+      type: type,
+      obj: obj,
+      position: { x: (sj.offset && sj.offset[0]) || 0, y: (sj.offset && sj.offset[1]) || 0, z: (sj.offset && sj.offset[2]) || 0 },
+      rotation: { x: (sj.rotation && sj.rotation[0]) || 0, y: (sj.rotation && sj.rotation[1]) || 0, z: (sj.rotation && sj.rotation[2]) || 0 },
+      scale: { x: (sj.scale && sj.scale[0]) || 1, y: (sj.scale && sj.scale[1]) || 1, z: (sj.scale && sj.scale[2]) || 1 },
+      material: sj.material || 'Default',
+      color: sj.color || '#ffffff',
+      texture: (sj.texture && sj.texture !== 'Grass') ? sj.texture : 'None'
+    };
+
+    clampShapePosition(shape);
+    applyTransformToShape(shape);
+    applyMaterialToShape(shape);
+    scene.add(obj);
+    shapes.push(shape);
+  });
+
+  refreshShapeList();
+  if (shapes.length) setSelection([shapes[shapes.length - 1].id]);
+  if (skipped > 0) alert(`Imported the first ${MAX_SHAPES} shapes — ${skipped} additional shape(s) in the code were skipped (max ${MAX_SHAPES}).`);
+}
+
+// Like resetAll() but doesn't push its own history entry (importCode already saved one).
+function resetAllSilent() {
+  teardownMultiPivot();
+  shapes.forEach(s => scene.remove(s.obj));
+  shapes = [];
+  transformControls.detach();
+  removeSelectionAxes();
+  selectedIds = [];
+  document.getElementById('exportBox').value = '';
+}
+
+</script>
+</body>
+</html>
