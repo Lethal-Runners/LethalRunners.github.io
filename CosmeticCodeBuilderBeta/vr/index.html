@@ -248,6 +248,15 @@
       <img id="renderPreviewImg" style="display:none; width:100%; border-radius:6px; border:1px solid var(--border); margin-bottom:6px;">
       <a id="renderDownloadLink" style="display:none;" download="cosmetic-render.png"><button class="small" style="width:100%;">Download PNG</button></a>
     </div>
+
+    <div class="section">
+      <h2>VR Menu Preview</h2>
+      <div style="font-size:10px; color:var(--text-dim); line-height:1.5; margin-bottom:6px;">
+        Live mirror of the in-headset menu — updates as it's used in VR, or you can
+        click it right here to test the menu without putting the headset on.
+      </div>
+      <div id="vrPanelPreviewWrap" style="border-radius:8px; overflow:hidden; border:1px solid var(--border);"></div>
+    </div>
   </div>
 
 </div>
@@ -455,14 +464,14 @@ let vrGizmoGroup = null;       // handle meshes, child of vrGizmoTarget
 let vrGizmoTarget = null;      // the Object3D currently holding the gizmo (shape.obj or multiPivot)
 let vrMultiHighlights = [];    // wireframe outline groups, one per multi-selected shape
 const vrColorHSV = { h: 0.6, s: 0.55, v: 1 }; // fallback picker state when nothing is selected
-
+let vrColorWheelCanvas = null;
 // ---- VR menu panel (canvas texture on a plane, attached to controller 1) ----
 const vrPanelCanvas = document.createElement('canvas');
 vrPanelCanvas.width = 480;
-vrPanelCanvas.height = 900;
+vrPanelCanvas.height = 960;
 const vrPanelCtx = vrPanelCanvas.getContext('2d');
 const vrPanelTexture = new THREE.CanvasTexture(vrPanelCanvas);
-const vrPanelGeo = new THREE.PlaneGeometry(0.26, 0.49);
+const vrPanelGeo = new THREE.PlaneGeometry(0.26, 0.52);
 const vrPanelMat = new THREE.MeshBasicMaterial({ map: vrPanelTexture, transparent: true, side: THREE.DoubleSide });
 let vrPanelMesh = null;
 let vrPanelHitboxes = [];
@@ -623,6 +632,70 @@ function init() {
   setupVRControllers();
   renderer.xr.addEventListener('sessionstart', onVRSessionStart);
   renderer.xr.addEventListener('sessionend', onVRSessionEnd);
+
+  initVRPanelPreview();
+  drawVRPanel();
+}
+
+// Makes the VR menu canvas visible (and usable) right on the desktop page, not just
+// inside the headset — same canvas element, same drawVRPanel()/vrPanelHitboxes used
+// for the in-VR laser-pointer interaction, just driven by mouse instead.
+function initVRPanelPreview() {
+  const wrap = document.getElementById('vrPanelPreviewWrap');
+  vrPanelCanvas.style.width = '100%';
+  vrPanelCanvas.style.display = 'block';
+  vrPanelCanvas.style.cursor = 'pointer';
+  wrap.appendChild(vrPanelCanvas);
+
+  const pointToCanvas = (e) => {
+    const rect = vrPanelCanvas.getBoundingClientRect();
+    return {
+      px: (e.clientX - rect.left) / rect.width * vrPanelCanvas.width,
+      py: (e.clientY - rect.top) / rect.height * vrPanelCanvas.height
+    };
+  };
+
+  // NEW: plain hover (no button held) — mirrors what updateVRPointerHover() does in VR
+  vrPanelCanvas.addEventListener('mousemove', (e) => {
+    if (e.buttons === 1) return; // dragging is handled by the existing listener below
+    const { px, py } = pointToCanvas(e);
+    const hit = vrPanelHitboxes.find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+    const idx = hit && hit.action ? hit.idx : (hit && (hit.isWheel || hit.isBrightnessBar) ? -1 : -1);
+    if (idx !== vrHoverBtnIndex) {
+      vrHoverBtnIndex = idx;
+      drawVRPanel();
+    }
+  });
+
+  // NEW: clear hover when the mouse leaves the panel entirely
+  vrPanelCanvas.addEventListener('mouseleave', () => {
+    if (vrHoverBtnIndex !== -1) {
+      vrHoverBtnIndex = -1;
+      drawVRPanel();
+    }
+  });
+
+  vrPanelCanvas.addEventListener('click', (e) => {
+    const { px, py } = pointToCanvas(e);
+    const hit = vrPanelHitboxes.find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+    if (!hit) return;
+    if (hit.isWheel) applyVRColorFromWheelPoint(hit, px, py);
+    else if (hit.isBrightnessBar) applyVRBrightnessFromPoint(hit, py);
+    else if (hit.action) {
+      // NEW: brief press flash to match VR's onVRSelectStart press feedback
+      vrPressBtnIndex = hit.idx;
+      drawVRPanel();
+      setTimeout(() => { vrPressBtnIndex = -1; hit.action(); }, 90);
+    }
+  });
+
+  vrPanelCanvas.addEventListener('mousemove', (e) => {
+    if (e.buttons !== 1) return;
+    const { px, py } = pointToCanvas(e);
+    const hit = vrPanelHitboxes.find(b => px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h);
+    if (hit && hit.isWheel) applyVRColorFromWheelPoint(hit, px, py);
+    else if (hit && hit.isBrightnessBar) applyVRBrightnessFromPoint(hit, py);
+  });
 }
 
 // =====================================================================================
@@ -641,6 +714,24 @@ function setupVRControllers() {
     const ray = new THREE.Line(rayGeo.clone(), rayMat);
     ray.name = 'pointerRay';
     ctrl.add(ray);
+
+    // Simple procedural stand-in for the physical controller (no external model
+    // dependency, so it can't silently fail to load like the earlier VRButton did).
+    const grip = new THREE.Group();
+    const body = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.018, 0.022, 0.09, 12),
+      new THREE.MeshStandardMaterial({ color: 0x383d4b, metalness: 0.35, roughness: 0.5 })
+    );
+    body.rotation.x = Math.PI / 2.3;
+    body.position.z = 0.02;
+    const tip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.014, 10, 8),
+      new THREE.MeshStandardMaterial({ color: 0x7c9cff, emissive: 0x2a3a7a, emissiveIntensity: 0.6 })
+    );
+    tip.position.set(0, 0, -0.03);
+    grip.add(body, tip);
+    ctrl.add(grip);
+
     cameraRig.add(ctrl);
 
     ctrl.addEventListener('connected', (e) => {
@@ -730,11 +821,23 @@ const VR_GIZMO_AXES = [
   { axis: 'y', color: 0x6bff8f },
   { axis: 'z', color: 0x6b9fff }
 ];
+const VR_GIZMO_UNIFORM_COLOR = 0xf5f6fa;
+
+let vrGizmoMaterialsByAxis = {}; // axis -> { material, baseColor } — used for yellow hover highlighting
+let vrHoveredGizmoAxis = null;
 
 function clearVRGizmo() {
   if (vrGizmoGroup && vrGizmoGroup.parent) vrGizmoGroup.parent.remove(vrGizmoGroup);
   vrGizmoGroup = null;
   vrGizmoTarget = null;
+  vrGizmoMaterialsByAxis = {};
+  vrHoveredGizmoAxis = null;
+}
+
+function makeVRGizmoHandleMaterial(axis, color) {
+  const mat = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 });
+  vrGizmoMaterialsByAxis[axis] = { material: mat, baseColor: color };
+  return mat;
 }
 
 function buildVRGizmo(target) {
@@ -742,9 +845,14 @@ function buildVRGizmo(target) {
   if (!target) return;
   vrGizmoTarget = target;
   vrGizmoGroup = new THREE.Group();
+  vrGizmoGroup.renderOrder = 999;
+  // Hidden by default — only ever shown while an XR session is actually presenting
+  // (see updateVRVisibility), so it never overlaps the desktop mouse gizmo in the
+  // regular browser view.
+  vrGizmoGroup.visible = false;
 
   VR_GIZMO_AXES.forEach(({ axis, color }) => {
-    const mat = new THREE.MeshBasicMaterial({ color, depthTest: false, transparent: true, opacity: 0.95 });
+    const mat = makeVRGizmoHandleMaterial(axis, color);
     let handle;
     if (vrGizmoMode === 'translate') {
       handle = new THREE.Group();
@@ -778,7 +886,62 @@ function buildVRGizmo(target) {
     vrGizmoGroup.add(handle);
   });
 
+  // Extra "whole object" uniform-scale handle — a small cube at the center, matching
+  // the desktop gizmo's center-drag-to-scale-everything behavior. Scale mode only.
+  if (vrGizmoMode === 'scale') {
+    const uniMat = makeVRGizmoHandleMaterial('xyz', VR_GIZMO_UNIFORM_COLOR);
+    const uniHandle = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.032, 0.032), uniMat);
+    uniHandle.userData.vrGizmoAxis = 'xyz';
+    uniHandle.userData.vrGizmoType = 'scale';
+    vrGizmoGroup.add(uniHandle);
+  }
+
   target.add(vrGizmoGroup);
+  updateVRGizmoScale();
+}
+
+// Keeps the gizmo handles a constant real-world size regardless of how big or small
+// the selected shape's own scale is, by giving the (child) gizmo group the exact
+// inverse of the target's scale — the two cancel out in the combined world matrix, so
+// a tiny or huge shape still gets normal-sized, grabbable handles instead of ones that
+// shrink down inside it or balloon out of reach.
+function updateVRGizmoScale() {
+  if (!vrGizmoGroup || !vrGizmoTarget) return;
+  const s = vrGizmoTarget.scale;
+  vrGizmoGroup.scale.set(
+    1 / Math.max(Math.abs(s.x), 0.001),
+    1 / Math.max(Math.abs(s.y), 0.001),
+    1 / Math.max(Math.abs(s.z), 0.001)
+  );
+}
+
+// Colors the currently pointed-at (or actively dragged) gizmo axis yellow so it's
+// obvious which axis you're about to move/rotate/scale along.
+function updateVRGizmoHover() {
+  if (!vrGizmoGroup) { vrHoveredGizmoAxis = null; return; }
+
+  let hoveredAxis = null;
+  for (const ctrl of [vrController1, vrController2]) {
+    if (ctrl && ctrl.userData.activeDrag && ctrl.userData.activeDrag.type === 'gizmo') {
+      hoveredAxis = ctrl.userData.activeDrag.axis;
+      break;
+    }
+  }
+  if (!hoveredAxis) {
+    const meshes = [];
+    vrGizmoGroup.traverse(o => { if (o.isMesh) meshes.push(o); });
+    for (const ctrl of [vrController1, vrController2]) {
+      if (!ctrl || ctrl.userData.activeDrag) continue;
+      const rc = vrRaycastFromController(ctrl);
+      const hits = rc.intersectObjects(meshes, false);
+      if (hits.length) { hoveredAxis = hits[0].object.userData.vrGizmoAxis; break; }
+    }
+  }
+
+  vrHoveredGizmoAxis = hoveredAxis;
+  Object.entries(vrGizmoMaterialsByAxis).forEach(([axis, { material, baseColor }]) => {
+    material.color.set(axis === hoveredAxis ? 0xffe14d : baseColor);
+  });
 }
 
 function vrSetGizmoMode(mode) {
@@ -797,6 +960,7 @@ function clearVRMultiHighlights() {
 
 function attachVRMultiHighlight(shape) {
   const group = new THREE.Group();
+  group.visible = false; // only shown while presenting — see updateVRVisibility
   shape.obj.traverse(o => {
     if (o.isMesh) {
       const edges = new THREE.EdgesGeometry(o.geometry);
@@ -890,20 +1054,31 @@ function onVRSelectStart(event) {
       const target = vrGizmoTarget;
       saveHistory();
 
-      const axisLocalMap = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
-      const axisWorld = axisLocalMap[axis].clone().transformDirection(target.matrixWorld).normalize();
       const controllerPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
-      const drag = { type: 'gizmo', gizmoType, axis, target, axisWorld, startControllerPos: controllerPos.clone() };
+      const drag = { type: 'gizmo', gizmoType, axis, target, startControllerPos: controllerPos.clone() };
 
-      if (gizmoType === 'translate') {
-        drag.startTargetWorldPos = new THREE.Vector3();
-        target.getWorldPosition(drag.startTargetWorldPos);
-      } else if (gizmoType === 'rotate') {
+      if (axis === 'xyz') {
+        // Whole-object uniform scale handle — tracked by distance-from-center instead
+        // of a single axis, so all three dimensions scale together proportionally.
         const center = new THREE.Vector3();
         target.getWorldPosition(center);
-        drag.prevDir = projectOnPlaneVec(controllerPos.clone().sub(center), axisWorld).normalize();
-      } else if (gizmoType === 'scale') {
-        drag.startScaleValue = target.scale[axis];
+        drag.startDist = Math.max(controllerPos.distanceTo(center), 0.001);
+        drag.startScale = target.scale.clone();
+      } else {
+        const axisLocalMap = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
+        const axisWorld = axisLocalMap[axis].clone().transformDirection(target.matrixWorld).normalize();
+        drag.axisWorld = axisWorld;
+
+        if (gizmoType === 'translate') {
+          drag.startTargetWorldPos = new THREE.Vector3();
+          target.getWorldPosition(drag.startTargetWorldPos);
+        } else if (gizmoType === 'rotate') {
+          const center = new THREE.Vector3();
+          target.getWorldPosition(center);
+          drag.prevDir = projectOnPlaneVec(controllerPos.clone().sub(center), axisWorld).normalize();
+        } else if (gizmoType === 'scale') {
+          drag.startScaleValue = target.scale[axis];
+        }
       }
 
       controller.userData.activeDrag = drag;
@@ -961,7 +1136,17 @@ function updateVRGizmoDrag(controller, drag) {
   const controllerPos = new THREE.Vector3().setFromMatrixPosition(controller.matrixWorld);
   const target = drag.target;
 
-  if (drag.gizmoType === 'translate') {
+  if (drag.axis === 'xyz') {
+    const center = new THREE.Vector3();
+    target.getWorldPosition(center);
+    const curDist = Math.max(controllerPos.distanceTo(center), 0.001);
+    const ratio = THREE.MathUtils.clamp(curDist / drag.startDist, 0.05, 8);
+    target.scale.set(
+      THREE.MathUtils.clamp(drag.startScale.x * ratio, 0.05, 6),
+      THREE.MathUtils.clamp(drag.startScale.y * ratio, 0.05, 6),
+      THREE.MathUtils.clamp(drag.startScale.z * ratio, 0.05, 6)
+    );
+  } else if (drag.gizmoType === 'translate') {
     const delta = controllerPos.clone().sub(drag.startControllerPos);
     const projLen = delta.dot(drag.axisWorld);
     const newWorldPos = drag.startTargetWorldPos.clone().addScaledVector(drag.axisWorld, projLen);
@@ -981,6 +1166,10 @@ function updateVRGizmoDrag(controller, drag) {
     const projLen = delta.dot(drag.axisWorld);
     target.scale[drag.axis] = THREE.MathUtils.clamp(drag.startScaleValue + projLen * 1.4, 0.05, 6);
   }
+
+  // Re-derive the handle-size compensation live so the gizmo doesn't shrink/balloon
+  // with the object while you're actively scaling it.
+  if (drag.gizmoType === 'scale' || drag.axis === 'xyz') updateVRGizmoScale();
 }
 
 function updateVRColorDrag(controller, drag) {
@@ -1037,9 +1226,48 @@ function updateVRMovement(dt) {
     const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).negate();
     const dist = VR_MOVE_SPEED * dt;
     cameraRig.position.addScaledVector(forward, -moveY * dist);
-    cameraRig.position.addScaledVector(right, moveX * dist);
+    cameraRig.position.addScaledVector(right, -moveX * dist); // was inverted — stick right now moves you right
   }
   if (Math.abs(turnX) > deadzone) cameraRig.rotation.y -= turnX * dt * 1.6;
+}
+
+// Lets a connected gamepad's left stick pan the DESKTOP camera around the model even
+// when you're just looking at the page in a normal browser window and not actually
+// presenting an immersive VR session (e.g. headset controllers still on and paired,
+// but the headset itself isn't in use right now).
+function updateDesktopGamepadPan(dt) {
+  if (renderer.xr.isPresenting) return;
+  if (!navigator.getGamepads) return;
+  const pads = navigator.getGamepads();
+  for (let i = 0; i < pads.length; i++) {
+    const gp = pads[i];
+    if (!gp || !gp.axes || gp.axes.length < 2) continue;
+    const x = gp.axes[0] || 0;
+    const y = gp.axes[1] || 0;
+    if (Math.abs(x) < 0.15 && Math.abs(y) < 0.15) continue;
+
+    const panSpeed = camRadius * 0.6 * dt;
+    const right = new THREE.Vector3();
+    camera.getWorldDirection(right);
+    right.cross(camera.up).normalize();
+    const up = new THREE.Vector3().crossVectors(right, new THREE.Vector3().subVectors(camera.position, camTarget)).normalize();
+    camTarget.addScaledVector(right, x * panSpeed);
+    camTarget.addScaledVector(up, -y * panSpeed);
+    updateCameraPosition();
+    break; // just use the first gamepad reporting stick movement
+  }
+}
+
+// Keeps VR-only visuals (controllers, gizmo, multi-select outlines) out of the normal
+// desktop/mouse view — they're part of the persistent scene graph so without this
+// they'd otherwise render (and overlap the desktop mouse gizmo) any time you're just
+// browsing the page, not actually presenting in a headset.
+function updateVRVisibility() {
+  const presenting = renderer.xr.isPresenting;
+  if (vrController1) vrController1.visible = presenting;
+  if (vrController2) vrController2.visible = presenting;
+  if (vrGizmoGroup) vrGizmoGroup.visible = presenting;
+  vrMultiHighlights.forEach(h => { h.visible = presenting; });
 }
 
 function updateVRPointerHover() {
@@ -1111,7 +1339,6 @@ function hsvToHex(h, s, v) {
   return '#' + hsvToRgb(h, s, v).map(x => x.toString(16).padStart(2, '0')).join('');
 }
 
-let vrColorWheelCanvas = null;
 function getColorWheelCanvas(size) {
   if (vrColorWheelCanvas && vrColorWheelCanvas.width === size) return vrColorWheelCanvas;
   const c = document.createElement('canvas');
@@ -1174,7 +1401,6 @@ function applyVRColorToSelection(hex) {
 // =====================================================================================
 
 function refreshVRPanel() {
-  if (!vrPanelMesh) return;
   drawVRPanel();
 }
 
@@ -1373,6 +1599,11 @@ function drawVRPanel() {
   y = drawSectionLabel(ctx, 'Texture', 16, y);
   y = drawTextureSwatchRow(ctx, y, W, sel);
   y += 10;
+
+  y = drawButtonRow(ctx, y, [
+    { label: 'Copy', action: () => { copySelection(); flashVRMessage('Copied'); } },
+    { label: 'Paste', action: () => { pasteClipboard(); refreshVRPanel(); } }
+  ], W, 2);
 
   y = drawButtonRow(ctx, y, [
     { label: 'Undo', action: () => { undo(); refreshVRPanel(); } },
@@ -1646,9 +1877,12 @@ function endMarquee(e) {
 const vrClock = new THREE.Clock();
 function animate() {
   const dt = Math.min(vrClock.getDelta(), 0.1);
+  updateVRVisibility();
   updateVRActiveDrags();
   updateVRMovement(dt);
+  updateVRGizmoHover();
   updateVRPointerHover();
+  updateDesktopGamepadPan(dt);
   if (camLight) {
     const worldPos = new THREE.Vector3();
     camera.getWorldPosition(worldPos);
